@@ -1,0 +1,11 @@
+Changes
+ignore.txt
+lib/Mojolicious/Plugin/Authentication.pm
+Makefile.PL
+MANIFEST
+README
+t/00-load.t
+t/boilerplate.t
+t/manifest.t
+t/pod-coverage.t
+t/pod.t
