@@ -12,9 +12,10 @@ WriteMakefile(
       : ()),
     PL_FILES            => {},
     PREREQ_PM => {
-        'Test::More' => 0,
-        'MojoX::Session' => 0,
-        'Mojolicious::Plugin::Session' => 0,
+        'Test::More'                    => 0,
+        'MojoX::Session'                => 0,
+        'Mojolicious::Plugin::Session'  => 0,
+        'Mojolicious'                   => 0, 
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Mojolicious-Plugin-Authentication-*' },

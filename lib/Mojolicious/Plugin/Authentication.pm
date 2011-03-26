@@ -4,7 +4,7 @@ use strict;
 use version;
 use Mojo::Base 'Mojolicious::Plugin';
 
-our $VERSION = qv(0.01);
+our $VERSION = qv(0.02);
 
 sub register {
     my ($self, $app, $args) = @_;
@@ -205,7 +205,7 @@ automatically be notified of progress on your bug as I make changes.
 =head1 CONTRIBUTING
 
 If you want to contribute changes or otherwise involve yourself in development, feel free to fork the Mercurial repository from
-L<http://bitbucket.org/xirinet/mofo/>.
+L<http://bitbucket.org/xirinet/mojolicious-plugin-authentication/>.
 
 
 =head1 SUPPORT
