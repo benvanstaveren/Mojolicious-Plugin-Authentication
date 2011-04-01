@@ -4,7 +4,7 @@ use strict;
 use version;
 use Mojo::Base 'Mojolicious::Plugin';
 
-our $VERSION = qv(0.02);
+our $VERSION = qv(0.03);
 
 sub register {
     my ($self, $app, $args) = @_;
@@ -82,7 +82,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head1 VERSION
 
-Version 0.01
+Version 0.03
 
 =head1 SYNOPSIS
 
