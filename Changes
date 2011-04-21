@@ -1,0 +1,10 @@
+Revision history for Mojolicious-Plugin-Authentication
+
+21/04/2011  0.04
+    *   Changed from using ExtUtils::MakeMaker to Module::Build
+    *   Removed the dependency on MojoX::Session and Mojolicious::Plugin::Session
+    !   As a side effect of the above, this plugin no longer handles session data storage,
+        that has become something you'll have to deal with yourself. 
+
+0.01 - 0.03 
+    Changes history wasn't being kept, but suffice to say a lot was done.

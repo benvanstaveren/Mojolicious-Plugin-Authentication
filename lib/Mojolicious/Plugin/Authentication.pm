@@ -1,10 +1,9 @@
 package Mojolicious::Plugin::Authentication;
 use warnings;
 use strict;
-use version;
 use Mojo::Base 'Mojolicious::Plugin';
 
-our $VERSION = qv(0.03);
+our $VERSION = '0.04';
 
 sub register {
     my ($self, $app, $args) = @_;
@@ -14,31 +13,34 @@ sub register {
     die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n" unless($args->{load_user});
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n" unless($args->{validate_user});
 
-    my $session_stash_key = $args->{session_stash_key} || 'mojox-session';
-    my $our_stash_key     = $args->{stash_key} || '__authentication__'; 
+    my $session_key     = $args->{session_key} || ref($app);
+    my $expire_delta    = $args->{expire_delta} || 86400;
+    my $our_stash_key   = $args->{stash_key} || '__authentication__'; 
 
-    $args->{session} ||= {};
+    $app->routes->add_condition(authenticated => sub {
+        my ($r, $c, $captures, $required) = (@_);
+        return ($required && $c->user_exists) ? 1 : 0;
+    });
 
-    $app->plugin(session => $args->{session});
     $app->plugins->add_hook(before_dispatch => sub {
         my $self = shift;
-        my $session = $self->stash->{$session_stash_key};
-        if($session->load) {
-            if($session->is_expired) {
-                $session->flush;
-                $session->create;
-            } else {
-                my $uid = $session->data('__uid__'); 
+        my $session = $self->sessions->{$session_key};
+        # session object:
+        #
+        # expires => time until this expires
+        # __uid__ => the user id associated with the session
+        if($session->{expires} < time()) {
+            # it's expired
+            delete($self->sessions->{$session_key});
+            $self->sessions->{$session_key} = { expires => time() + $expire_delta };
+        } else {
+            if(my $uid = $session->{__uid__}) {
                 my $user;
                 if($uid && ($user = $args->{load_user}->($self, $uid))) {
                     $self->stash->{$our_stash_key}->{user} = $user;
-                    $session->extend_expires;
-                    $session->flush;
+                    $self->sessions->{$session_key}->{expires} += $expire_delta;
                 }
             }
-        } else {
-            $session->create;
-            $session->flush;
         }
     });
     $app->helper(user_exists => sub {
@@ -52,21 +54,17 @@ sub register {
     $app->helper(logout => sub {
         my $self = shift;
         delete($self->stash->{$our_stash_key}->{user});
-        $self->stash->{$session_stash_key}->clear('__uid__');
-        $self->stash->{$session_stash_key}->flush;
+        delete($self->stash->{$session_key}->{__uid__});
     });
-    # this replaces the mojolicious built-in session helper
-    $app->helper(session => sub { return shift->stash->{$session_stash_key}->data });
     $app->helper(authenticate => sub {
         my $self = shift;
         my $user = shift;
         my $pass = shift;
 
         if(my $uid = $self->stash->{$our_stash_key}->{validate_user}->($self, $user, $pass)) {
-            $self->stash->{$session_stash_key}->data('__uid__' => $uid);
+            $self->sessions->{$session_key}->{'__uid__' => $uid);
             $self->stash->{$our_stash_key}->{user} = $args->{load_user}->($uid);
-            $self->stash->{$session_stash_key}->extend_expires;
-            $self->stash->{$session_stash_key}->flush;
+            $self->sessions->{$session_key}->{expires} += $expire_delta;
             return 1;
         } else {
             return 0;
@@ -82,17 +80,14 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =head1 SYNOPSIS
 
     use Mojolicious::Plugin::Authentication
-    use Mojolicious::Plugin::Session;
 
     $self->plugin('authentication' => {
-        session => {
-            'stash_key' => 'mojox-session',
-        },
+        'session_key' => 'wickedapp',
         'load_user' => sub { ... },
         'validate_user' => sub { ... },
     });
@@ -100,6 +95,7 @@ Version 0.03
     if($self->authenticate('username', 'password')) {
         ... 
     }
+
 
 =head1 METHODS
 
@@ -120,21 +116,49 @@ Version 0.03
 
     Removes the session data for authentication, and effectively logs a user out.
 
-=head2 session
-    
-    Returns a hashref containing all session data. Changes made here are automatically committed when the request ends.
-
 =head1 CONFIGURATION
 
-You must supply 2 subroutines, namely 'load_user' and 'validate_user'. load_user is called when the plugin needs to load a user from the user store. It's done this way to give you maximum flexibility whilst making life a little easier in the long run. load_user is expected to return a valid user object/hash/array/thingamajig. validate_user is called from the authenticate module and is passed a username and password, and is expected to return either a user id or undef, depending on whether the user is logged in or not. 
+The following options can be set for the plugin:
+
+    session_key     (optional)  The name of the session key in $app->sessions
+    load_user       (REQUIRED)  A coderef for user loading (see USER LOADING)
+    validate_user   (REQUIRED)  A coderef for user validation (see USER VALIDATION)
+
+=head1 USER LOADING
+
+The coderef you pass to the load_user configuration key has the following signature:
+
+    sub { 
+        my $app = shift; 
+        my $uid = shift
+        ...
+        return $user;
+    }
+
+The uid is the value that was originally returned from the validate_user coderef. You must return
+either a user object (it can be a hashref, arrayref, or a blessed object) or undef. 
+
+=head1 USER VALIDATION
+
+User validation is what happens when we need to authenticate someone. The coderef you pass to the validate_user configuration key has the following signatre:
+
+    sub {
+        my $app = shift;
+        my $username = shift;
+        my $password = shift;
+        ...
+        return $uid;
+    }
+
+You must return either a user id or undef. The user id can be numerical or a string. Do not return hashrefs, arrayrefs or objects, since the behaviour of this plugin could get a little bit on the odd side of weird.
+
 
 =head1 EXAMPLE
 
     use Mojolicious::Lite;
 
-    plugin 'session' => { stash_key => 'session', store => 'dbi', expires_delta => 5 };
     plugin 'authentication' => { 
-        session_stash_key => 'session', 
+        session_key => 'lite-example', 
         stash_key => 'auth', 
         load_user => sub {
             my $self = shift;
@@ -157,11 +181,9 @@ You must supply 2 subroutines, namely 'load_user' and 'validate_user'. load_user
             my $sth = $self->db->prepare('SELECT * FROM user WHERE username = ?');
             if(my $res = $sth->fetchrow_hashref) {
                 my $salt = substr($res->{password}, 0, 2);
-                if(crypt($password, $salt) eq $res->{password}) {
-                    return $res->{user_id};
-                } else {
-                    return undef;
-                }
+                return (crypt($password, $salt) eq $res->{password})
+                    ? $res->{user_id}
+                    : undef;
             } else {
                 return undef;
             }
@@ -189,6 +211,28 @@ You must supply 2 subroutines, namely 'load_user' and 'validate_user'. load_user
         }
     };
 
+=head1 ROUTING VIA CONDITION
+
+This plugin also exports a routing condition you can use in order to limit access to certain documents to only authenticated users.
+
+    $r->route('/foo')->over(authenticated => 1)->to('mycontroller#foo');
+    my $authenticated_only = $r->route('/members')->over(authenticated => 1)->to('members#index');
+    $authenticated_only->route('online')->to('members#online');
+
+This does not let you easily redirect users to a login page, however.
+
+=head1 ROUTING VIA BRIDGE
+
+If you want to be able to send people to a login page, you will have to use the following:
+
+    my $members_only = $r->route('/members')->to(cb => sub {
+        my $self = shift;
+
+        $self->redirect_to('/login') and return 0 unless($self->user_exists);
+        return 1;
+    });
+
+    $members_only->route('online')->to('members#online');
 
 =head1 AUTHOR
 
@@ -196,16 +240,13 @@ Ben van Staveren, C<< <madcat at cpan.org> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-mojolicious-plugin-authentication at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Mojolicious-Plugin-Authentication>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
+Please report any bugs or feature requests through the web interface at L<https://bitbucket.org/xirinet/mojolicious-plugin-authentication/issues>.
 
 
 =head1 CONTRIBUTING
 
 If you want to contribute changes or otherwise involve yourself in development, feel free to fork the Mercurial repository from
-L<http://bitbucket.org/xirinet/mojolicious-plugin-authentication/>.
+L<http://bitbucket.org/xirinet/mojolicious-plugin-authentication/> and make pull requests for any patches you have.
 
 
 =head1 SUPPORT
@@ -218,10 +259,6 @@ You can find documentation for this module with the perldoc command.
 You can also look for information at:
 
 =over 4
-
-=item * RT: CPAN's request tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Mojolicious-Plugin-Authentication>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
