@@ -2,9 +2,9 @@ Build.PL
 Changes
 lib/Mojolicious/Plugin/Authentication.pm
 MANIFEST
+META.json
+META.yml
 README
 t/00-load.t
-t/boilerplate.t
+t/01-functional.t
 t/manifest.t
-t/pod-coverage.t
-t/pod.t

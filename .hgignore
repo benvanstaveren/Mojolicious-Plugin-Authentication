@@ -13,3 +13,6 @@ pod2htm*.tmp
 Mojolicious-Plugin-Authentication-*
 *.BAK
 *.bak
+META.json
+META.yml
+MYMETA.*

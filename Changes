@@ -1,6 +1,14 @@
 Revision history for Mojolicious-Plugin-Authentication
 
-21/04/2011  0.04
+22/04/2011  0.5.0
+    *   Changed version number (again) due to earlier module using version and qv(0.03) resulting in
+        a version number 0.3.0.
+    !   Fixed a bunch of bugs induced by coding-while-asleep, courtesy of Andre Parker 
+    +   Added functional test using Test::Mojo so we can all be sure the damn plugin
+        works the way it should :)
+    
+
+21/04/2011  0.04 (not released)
     *   Changed from using ExtUtils::MakeMaker to Module::Build
     *   Removed the dependency on MojoX::Session and Mojolicious::Plugin::Session
     !   As a side effect of the above, this plugin no longer handles session data storage,

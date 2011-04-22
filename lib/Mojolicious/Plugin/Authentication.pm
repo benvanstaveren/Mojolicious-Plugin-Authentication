@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use Mojo::Base 'Mojolicious::Plugin';
 
-our $VERSION = '0.04';
+our $VERSION = '0.5.0';
 
 sub register {
     my ($self, $app, $args) = @_;
@@ -16,6 +16,9 @@ sub register {
     my $session_key     = $args->{session_key} || ref($app);
     my $expire_delta    = $args->{expire_delta} || 86400;
     my $our_stash_key   = $args->{stash_key} || '__authentication__'; 
+    my $load_user_f     = $args->{load_user};
+    my $validate_user_f = $args->{validate_user};
+
 
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = (@_);
@@ -23,22 +26,22 @@ sub register {
     });
 
     $app->plugins->add_hook(before_dispatch => sub {
-        my $self = shift;
-        my $session = $self->sessions->{$session_key};
-        # session object:
-        #
-        # expires => time until this expires
-        # __uid__ => the user id associated with the session
+        my $self    = shift;
+        my $c       = shift;
+        my $session = $c->app->sessions->{$session_key};
+
+        $session->{expires} ||= 0;
+
         if($session->{expires} < time()) {
             # it's expired
-            delete($self->sessions->{$session_key});
-            $self->sessions->{$session_key} = { expires => time() + $expire_delta };
+            delete($c->app->sessions->{$session_key});
+            $c->app->sessions->{$session_key} = { expires => time() + $expire_delta };
         } else {
             if(my $uid = $session->{__uid__}) {
                 my $user;
-                if($uid && ($user = $args->{load_user}->($self, $uid))) {
-                    $self->stash->{$our_stash_key}->{user} = $user;
-                    $self->sessions->{$session_key}->{expires} += $expire_delta;
+                if($uid && ($user = $load_user_f->($self, $uid))) {
+                    $c->stash->{$our_stash_key}->{user} = $user;
+                    $c->app->sessions->{$session_key}->{expires} += $expire_delta;
                 }
             }
         }
@@ -61,10 +64,10 @@ sub register {
         my $user = shift;
         my $pass = shift;
 
-        if(my $uid = $self->stash->{$our_stash_key}->{validate_user}->($self, $user, $pass)) {
-            $self->sessions->{$session_key}->{'__uid__' => $uid);
-            $self->stash->{$our_stash_key}->{user} = $args->{load_user}->($uid);
-            $self->sessions->{$session_key}->{expires} += $expire_delta;
+        if(my $uid = $validate_user_f->($self, $user, $pass)) {
+            $self->app->sessions->{$session_key}->{'__uid__'} = $uid;
+            $self->stash->{$our_stash_key}->{user} = $load_user_f->($self, $uid);
+            $self->app->sessions->{$session_key}->{expires} += $expire_delta;
             return 1;
         } else {
             return 0;
@@ -80,7 +83,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head1 VERSION
 
-Version 0.04
+Version 0.5.0
 
 =head1 SYNOPSIS
 
@@ -277,6 +280,7 @@ L<http://search.cpan.org/dist/Mojolicious-Plugin-Authentication/>
 
 =head1 ACKNOWLEDGEMENTS
 
+Andrew Parker   -   For pointing out some bugs that crept in; a silent reminder not to code while sleepy
 
 =head1 LICENSE AND COPYRIGHT
 
