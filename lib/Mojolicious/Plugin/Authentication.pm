@@ -106,9 +106,16 @@ Version 1.08
 
 The following options can be set for the plugin:
 
-    session_key     (optional)  The name of the session key in $app->sessions
     load_user       (REQUIRED)  A coderef for user loading (see USER LOADING)
     validate_user   (REQUIRED)  A coderef for user validation (see USER VALIDATION)
+    session_key     (optional)  The name of the session key
+
+In order to set the session expiry time, use the following in your startup routine:
+
+    $app->plugin('authentication', { ... });
+    $app->sessions->default_expiration(86400); # set expiry to 1 day
+    $app->sessions->default_expiration(3600); # set expiry to 1 hour
+
 
 =head1 USER LOADING
 
@@ -138,74 +145,20 @@ User validation is what happens when we need to authenticate someone. The codere
 
 You must return either a user id or undef. The user id can be numerical or a string. Do not return hashrefs, arrayrefs or objects, since the behaviour of this plugin could get a little bit on the odd side of weird.
 
+=head1 EXAMPLES
 
-=head1 EXAMPLE
-
-    use Mojolicious::Lite;
-
-    plugin 'authentication' => { 
-        session_key => 'lite-example', 
-        stash_key => 'auth', 
-        load_user => sub {
-            my $self = shift;
-            my $uid = shift;
-            # assume we have a db helper that also uses DBI
-            my $sth = $self->db->prepare('SELECT * FROM user WHERE user_id = ?');
-            $sth->execute($uid);
-            if(my $res = $sth->fetchrow_hashref) {
-                return $res;
-            } else {
-                return undef;
-            }
-        },
-        validate_user => sub {
-            my $self = shift;
-            my $username = shift;
-            my $password = shift;
-
-            # assume we have a db helper that also uses DBI
-            my $sth = $self->db->prepare('SELECT * FROM user WHERE username = ?');
-            if(my $res = $sth->fetchrow_hashref) {
-                my $salt = substr($res->{password}, 0, 2);
-                return (crypt($password, $salt) eq $res->{password})
-                    ? $res->{user_id}
-                    : undef;
-            } else {
-                return undef;
-            }
-        },
-    };
-
-    get '/foo' => sub {
-        my $self = shift;
-
-        if(!$self->user_exists) {
-            $self->render(template => 'loginform');
-        } else {
-            $self->render(template => 'loggedin');
-        }
-    };
-    get '/login' => sub {
-        my $self = shift;
-        my $u    = $self->req->param('username');
-        my $p    = $self->req->param('password');
-
-        if($self->authenticate($u, $p)) {
-            $self->redirect_to('/foo');
-        } else {
-            $self->render(text => 'Invalid credentials');
-        }
-    };
+For a code example using this, see the t/01-functional.t test, it uses Mojolicious::Lite and this plugin.
 
 =head1 ROUTING VIA CONDITION
 
 This plugin also exports a routing condition you can use in order to limit access to certain documents to only authenticated users.
 
     $r->route('/foo')->over(authenticated => 1)->to('mycontroller#foo');
+
     my $authenticated_only = $r->route('/members')->over(authenticated => 1)->to('members#index');
     $authenticated_only->route('online')->to('members#online');
 
-This does not let you easily redirect users to a login page, however.
+If someone is not authenticated, these routes will not be considered by the dispatcher and unless you have set up a catch-all route, a 404 Not Found will be generated instead. 
 
 =head1 ROUTING VIA BRIDGE
 
@@ -220,6 +173,10 @@ If you want to be able to send people to a login page, you will have to use the 
 
     $members_only->route('online')->to('members#online');
 
+=head1 SEE ALSO
+
+L<Mojolicious::Sessions>
+
 =head1 AUTHOR
 
 Ben van Staveren, C<< <madcat at cpan.org> >>
@@ -227,7 +184,6 @@ Ben van Staveren, C<< <madcat at cpan.org> >>
 =head1 BUGS
 
 Please report any bugs or feature requests through the web interface at L<https://bitbucket.org/xirinet/mojolicious-plugin-authentication/issues>.
-
 
 =head1 CONTRIBUTING
 
