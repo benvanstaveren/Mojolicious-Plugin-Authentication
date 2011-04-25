@@ -53,10 +53,10 @@ sub register {
         my $user = shift;
         my $pass = shift;
 
-        if(my $uid = $validate_user_f->($self, $user, $pass)) {
-            $self->session($session_key => $uid);
-            $self->session->{$session_key} = $uid;
-            $self->stash->{$our_stash_key}->{user} = $load_user_f->($self, $uid);
+        if(my $uid = $validate_user_f->($c, $user, $pass)) {
+            $c->session($session_key => $uid);
+            $c->session->{$session_key} = $uid;
+            $c->stash->{$our_stash_key}->{user} = $load_user_f->($c, $uid);
             return 1;
         } else {
             return 0;
