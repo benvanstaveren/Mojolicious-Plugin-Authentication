@@ -8,8 +8,8 @@ sub register {
 
     $args ||= {};
 
-    die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n" unless($args->{load_user});
-    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n" unless($args->{validate_user});
+    die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n" unless($args->{load_user} && ref($args->{load_user}) eq 'CODE');
+    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n" unless($args->{validate_user} && ref($args->{validate_user}) eq 'CODE');
 
     my $session_key     = $args->{session_key} || 'session';
     my $our_stash_key   = $args->{stash_key} || '__authentication__'; 
@@ -25,31 +25,31 @@ sub register {
         my $c       = shift;
         if(my $uid = $c->session($session_key)) {
             my $user;
-            $c->stash($our_stash_key => { user => $user }) if($uid && ($user = $load_user_f->($self, $uid)));
+            $c->stash($our_stash_key => { user => $user }) if($uid && ($user = $load_user_f->($c, $uid)));
         }
     });
     $app->helper(user_exists => sub {
-        my $self = shift;
+        my $c = shift;
         return (
-            defined($self->stash($our_stash_key)) && 
-            defined($self->stash($our_stash_key)->{user})
+            defined($c->stash($our_stash_key)) && 
+            defined($c->stash($our_stash_key)->{user})
             ) ? 1 : 0;
 
     });
     $app->helper(user => sub {
-        my $self = shift;
-        return ($self->stash($our_stash_key))
-            ? $self->stash($our_stash_key)->{user}
+        my $c = shift;
+        return ($c->stash($our_stash_key))
+            ? $c->stash($our_stash_key)->{user}
             : undef;
     });
     $app->helper(logout => sub {
-        my $self = shift;
-        delete($self->stash->{$our_stash_key});
-        delete($self->session->{$session_key});
+        my $c = shift;
+        delete($c->stash->{$our_stash_key});
+        delete($c->session->{$session_key});
 
     });
     $app->helper(authenticate => sub {
-        my $self = shift;
+        my $c = shift;
         my $user = shift;
         my $pass = shift;
 
