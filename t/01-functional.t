@@ -6,7 +6,7 @@ use warnings;
 BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
 use Test::More;
-plan tests => 23;
+plan tests => 29;
 
 # testing code starts here
 use Mojolicious::Lite;
@@ -58,6 +58,13 @@ get '/condition/authonly' => (authenticated => 1) => sub {
     $self->render(text => 'authenticated condition');
 };
 
+get '/logout' => sub {
+    my $self = shift;
+
+    $self->logout();
+    $self->render(text => 'logout');
+};
+
 my $t = Test::Mojo->new;
 
 $t->get_ok('/')->status_is(200)->content_is('index page');
@@ -72,3 +79,5 @@ $t->post_form_ok('/login', { u => 'foo', p => 'bar' })->status_is(200)->content_
 $t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
 $t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated condition');
 
+$t->get_ok('/logout')->status_is(200)->content_is('logout');
+$t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
