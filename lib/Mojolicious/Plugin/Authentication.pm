@@ -89,35 +89,34 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head2 authenticate($username, $password)
 
-    Authenticate will use the supplied load_user and validate_user subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.
-    Returns true when the user has been successfully authenticated, false otherwise.
+Authenticate will use the supplied load_user and validate_user subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.
+Returns true when the user has been successfully authenticated, false otherwise.
 
 =head2 user_exists
 
-    Returns true if an authenticated user exists, false otherwise.
+Returns true if an authenticated user exists, false otherwise.
 
 =head2 user
 
-    Returns the user object as it was returned from the supplied 'load_user' subroutine ref.
+Returns the user object as it was returned from the supplied 'load_user' subroutine ref.
 
 =head2 logout
 
-    Removes the session data for authentication, and effectively logs a user out.
+Removes the session data for authentication, and effectively logs a user out.
 
 =head1 CONFIGURATION
 
 The following options can be set for the plugin:
 
-    load_user       (REQUIRED)  A coderef for user loading (see USER LOADING)
-    validate_user   (REQUIRED)  A coderef for user validation (see USER VALIDATION)
-    session_key     (optional)  The name of the session key
+load_user       (REQUIRED)  A coderef for user loading (see USER LOADING)
+validate_user   (REQUIRED)  A coderef for user validation (see USER VALIDATION)
+session_key     (optional)  The name of the session key
 
 In order to set the session expiry time, use the following in your startup routine:
 
-    $app->plugin('authentication', { ... });
-    $app->sessions->default_expiration(86400); # set expiry to 1 day
-    $app->sessions->default_expiration(3600); # set expiry to 1 hour
-
+$app->plugin('authentication', { ... });
+$app->sessions->default_expiration(86400); # set expiry to 1 day
+$app->sessions->default_expiration(3600); # set expiry to 1 hour
 
 =head1 USER LOADING
 
