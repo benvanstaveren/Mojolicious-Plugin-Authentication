@@ -8,7 +8,8 @@ sub register {
 
     die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n"
         unless $args->{load_user} && ref($args->{load_user}) eq 'CODE';
-    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
+    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
+        unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
     my $session_key      = $args->{session_key} || 'auth_data';
     my $our_stash_key    = $args->{stash_key}   || '__authentication__'; 
