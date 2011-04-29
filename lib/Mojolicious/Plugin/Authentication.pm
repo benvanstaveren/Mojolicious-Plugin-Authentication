@@ -23,9 +23,8 @@ sub register {
     $app->plugins->add_hook(before_dispatch => sub {
         my ($self, $c) = @_;
         if (my $uid = $c->session($session_key)) {
-            my $user;
-            $c->stash($our_stash_key => { user => $user })
-                if $uid && ($user = $load_user_f->($c, $uid));
+            my $user = $load_user_f->($c, $uid);
+            $c->stash($our_stash_key => { user => $user }) if $user;
         }
     });
 
