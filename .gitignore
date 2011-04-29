@@ -17,3 +17,4 @@ Mojolicious-Plugin-Authentication-*
 META.json
 META.yml
 MYMETA.*
+*.swp
