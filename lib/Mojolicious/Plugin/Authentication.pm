@@ -55,7 +55,6 @@ sub register {
         my ($c, $user, $pass) = @_;
         if (my $uid = $validate_user_f->($c, $user, $pass)) {
             $c->session($session_key => $uid);
-            $c->session->{$session_key} = $uid;
             $c->stash->{$our_stash_key}->{user} = $load_user_f->($c, $uid);
             return 1;
         }
