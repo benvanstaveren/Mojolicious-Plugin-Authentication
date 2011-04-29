@@ -10,10 +10,10 @@ sub register {
         unless $args->{load_user} && ref($args->{load_user}) eq 'CODE';
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
-    my $session_key     = $args->{session_key}  || 'auth_data';
-    my $our_stash_key   = $args->{stash_key}    || '__authentication__'; 
-    my $load_user_f     = $args->{load_user};
-    my $validate_user_f = $args->{validate_user};
+    my $session_key      = $args->{session_key} || 'auth_data';
+    my $our_stash_key    = $args->{stash_key}   || '__authentication__'; 
+    my $load_user_cb     = $args->{load_user};
+    my $validate_user_cb = $args->{validate_user};
 
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = @_;
@@ -23,7 +23,7 @@ sub register {
     $app->plugins->add_hook(before_dispatch => sub {
         my ($self, $c) = @_;
         if (my $uid = $c->session($session_key)) {
-            my $user = $load_user_f->($c, $uid);
+            my $user = $load_user_cb->($c, $uid);
             $c->stash($our_stash_key => { user => $user }) if $user;
         }
     });
@@ -53,9 +53,9 @@ sub register {
 
     $app->helper(authenticate => sub {
         my ($c, $user, $pass) = @_;
-        if (my $uid = $validate_user_f->($c, $user, $pass)) {
+        if (my $uid = $validate_user_cb->($c, $user, $pass)) {
             $c->session($session_key => $uid);
-            $c->stash->{$our_stash_key}->{user} = $load_user_f->($c, $uid);
+            $c->stash->{$our_stash_key}->{user} = $load_user_cb->($c, $uid);
             return 1;
         }
         return;
