@@ -10,7 +10,7 @@ sub register {
         unless $args->{load_user} && ref($args->{load_user}) eq 'CODE';
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
-    my $session_key     = $args->{session_key}  || 'session';
+    my $session_key     = $args->{session_key}  || 'auth_data';
     my $our_stash_key   = $args->{stash_key}    || '__authentication__'; 
     my $load_user_f     = $args->{load_user};
     my $validate_user_f = $args->{validate_user};
