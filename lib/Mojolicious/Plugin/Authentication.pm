@@ -210,7 +210,11 @@ L<http://search.cpan.org/dist/Mojolicious-Plugin-Authentication/>
 
 =head1 ACKNOWLEDGEMENTS
 
-Andrew Parker   -   For pointing out some bugs that crept in; a silent reminder not to code while sleepy
+Andrew Parker   
+    -   For pointing out some bugs that crept in; a silent reminder not to code while sleepy
+
+Mirko Westermeier (memowe) 
+    -   For doing some (much needed) code cleanup
 
 =head1 LICENSE AND COPYRIGHT
 
