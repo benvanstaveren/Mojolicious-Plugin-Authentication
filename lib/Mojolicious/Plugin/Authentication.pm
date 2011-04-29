@@ -1,5 +1,3 @@
-use warnings;
-use strict;
 package Mojolicious::Plugin::Authentication;
 use Mojo::Base 'Mojolicious::Plugin';
 
@@ -8,26 +6,29 @@ sub register {
 
     $args ||= {};
 
-    die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n" unless($args->{load_user} && ref($args->{load_user}) eq 'CODE');
-    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n" unless($args->{validate_user} && ref($args->{validate_user}) eq 'CODE');
+    die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n"
+        unless $args->{load_user} && ref($args->{load_user}) eq 'CODE';
+    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
+        unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
-    my $session_key     = $args->{session_key} || 'session';
-    my $our_stash_key   = $args->{stash_key} || '__authentication__'; 
-    my $load_user_f     = $args->{load_user};
-    my $validate_user_f = $args->{validate_user};
+    my $session_key      = $args->{session_key} || 'auth_data';
+    my $our_stash_key    = $args->{stash_key}   || '__authentication__'; 
+    my $load_user_cb     = $args->{load_user};
+    my $validate_user_cb = $args->{validate_user};
 
     $app->routes->add_condition(authenticated => sub {
-        my ($r, $c, $captures, $required) = (@_);
+        my ($r, $c, $captures, $required) = @_;
         return ($required && $c->user_exists) ? 1 : 0;
     });
+
     $app->plugins->add_hook(before_dispatch => sub {
-        my $self    = shift;
-        my $c       = shift;
-        if(my $uid = $c->session($session_key)) {
-            my $user;
-            $c->stash($our_stash_key => { user => $user }) if($uid && ($user = $load_user_f->($c, $uid)));
+        my ($self, $c) = @_;
+        if (my $uid = $c->session($session_key)) {
+            my $user = $load_user_cb->($c, $uid);
+            $c->stash($our_stash_key => { user => $user }) if $user;
         }
     });
+
     $app->helper(user_exists => sub {
         my $c = shift;
         return (
@@ -36,31 +37,29 @@ sub register {
             ) ? 1 : 0;
 
     });
+
     $app->helper(user => sub {
         my $c = shift;
         return ($c->stash($our_stash_key))
             ? $c->stash($our_stash_key)->{user}
             : undef;
     });
+
     $app->helper(logout => sub {
         my $c = shift;
-        delete($c->stash->{$our_stash_key});
-        delete($c->session->{$session_key});
+        delete $c->stash->{$our_stash_key};
+        delete $c->session->{$session_key};
 
     });
-    $app->helper(authenticate => sub {
-        my $c = shift;
-        my $user = shift;
-        my $pass = shift;
 
-        if(my $uid = $validate_user_f->($c, $user, $pass)) {
+    $app->helper(authenticate => sub {
+        my ($c, $user, $pass) = @_;
+        if (my $uid = $validate_user_cb->($c, $user, $pass)) {
             $c->session($session_key => $uid);
-            $c->session->{$session_key} = $uid;
-            $c->stash->{$our_stash_key}->{user} = $load_user_f->($c, $uid);
+            $c->stash->{$our_stash_key}->{user} = $load_user_cb->($c, $uid);
             return 1;
-        } else {
-            return 0;
         }
+        return;
     });
 }
 
@@ -80,7 +79,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
         'validate_user' => sub { ... },
     });
 
-    if($self->authenticate('username', 'password')) {
+    if ($self->authenticate('username', 'password')) {
         ... 
     }
 
@@ -124,8 +123,7 @@ In order to set the session expiry time, use the following in your startup routi
 The coderef you pass to the load_user configuration key has the following signature:
 
     sub { 
-        my $app = shift; 
-        my $uid = shift
+        my ($app, $uid) = @_;
         ...
         return $user;
     }
@@ -138,9 +136,7 @@ either a user object (it can be a hashref, arrayref, or a blessed object) or und
 User validation is what happens when we need to authenticate someone. The coderef you pass to the validate_user configuration key has the following signatre:
 
     sub {
-        my $app = shift;
-        my $username = shift;
-        my $password = shift;
+        my ($app, $username, $password) = @_;
         ...
         return $uid;
     }
