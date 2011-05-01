@@ -1,0 +1,25 @@
+=pod
+
+L<Mojolicious::Plugin::Authentication> is a module that helps you deal with authenticating users in your Mojolicious application. 
+
+=head2 Cloning this repository
+
+You are free to clone this repository and make any sort of modifications you need, but please note the following:
+
+=over 2
+
+=item * 
+
+You need L<Dist::Zilla> in order to build your own copy of the module. There is no Makefile.PL or Build.PL present in the repository, since L<Dist::Zilla> auto-generates these for every release.
+
+=item *
+
+You will also need some additional plugins for L<Dist::Zilla>, namely L<Dist::Zilla::Plugin::Git> and L<Dist::Zilla::Plugin::PodWeaver>. 
+
+=back
+
+=head2 Building with Dist::Zilla
+
+Once you have installed L<Dist::Zilla>, run C<dzil build> from the root folder in this repository. If all goes well, it will fetch version information and such things from your Github fork. If you want to intsall Dist::Zilla locally, use C<dzil install>. 
+
+=cut
