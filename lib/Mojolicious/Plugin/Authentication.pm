@@ -107,15 +107,21 @@ Removes the session data for authentication, and effectively logs a user out.
 
 The following options can be set for the plugin:
 
-load_user       (REQUIRED)  A coderef for user loading (see USER LOADING)
-validate_user   (REQUIRED)  A coderef for user validation (see USER VALIDATION)
-session_key     (optional)  The name of the session key
+=over 4
+
+=item load_user (REQUIRED) A coderef for user loading (see USER LOADING)
+
+=item validate_user (REQUIRED) A coderef for user validation (see USER VALIDATION)
+
+=item session_key (optional) The name of the session key
+
+=back 
 
 In order to set the session expiry time, use the following in your startup routine:
 
-$app->plugin('authentication', { ... });
-$app->sessions->default_expiration(86400); # set expiry to 1 day
-$app->sessions->default_expiration(3600); # set expiry to 1 hour
+    $app->plugin('authentication', { ... });
+    $app->sessions->default_expiration(86400); # set expiry to 1 day
+    $app->sessions->default_expiration(3600); # set expiry to 1 hour
 
 =head1 USER LOADING
 
