@@ -6,12 +6,11 @@ use warnings;
 BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
 use Test::More;
-plan tests => 29;
+plan tests => 38;
 
 # testing code starts here
 use Mojolicious::Lite;
 use Test::Mojo;
-
 
 plugin 'authentication', {
     load_user => sub {
@@ -22,14 +21,16 @@ plugin 'authentication', {
             'username' => 'foo',
             'password' => 'bar',
             'name'     => 'Foo'
-            } if($uid eq 'userid');
+            } if($uid eq 'userid' || $uid eq 'useridwithextradata');
         return undef;
     },
     validate_user => sub {
         my $self = shift;
-        my $username = shift;
-        my $password = shift;
+        my $username = shift || '';
+        my $password = shift || '';
+        my $extradata = shift || {};
 
+        return 'useridwithextradata' if($username eq 'foo' && $password eq 'bar' && $extradata->{'ohnoes'} eq 'itsameme');
         return 'userid' if($username eq 'foo' && $password eq 'bar');
         return undef;
     },
@@ -46,6 +47,14 @@ post '/login' => sub {
     my $p    = $self->req->param('p');
 
     $self->render(text => ($self->authenticate($u, $p)) ? 'ok' : 'failed');
+};
+
+post '/login2' => sub {
+    my $self = shift;
+    my $u    = $self->req->param('u');
+    my $p    = $self->req->param('p');
+
+    $self->render(text => ($self->authenticate($u, $p, { 'ohnoes' => 'itsameme' })) ? 'ok' : 'failed');
 };
 
 get '/authonly' => sub {
@@ -81,3 +90,7 @@ $t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated con
 
 $t->get_ok('/logout')->status_is(200)->content_is('logout');
 $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
+
+$t->post_form_ok('/login2', { u => 'foo', p => 'bar' })->status_is(200)->content_is('ok');
+$t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
+$t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated condition');

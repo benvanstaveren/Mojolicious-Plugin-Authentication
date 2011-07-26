@@ -53,8 +53,8 @@ sub register {
     });
 
     $app->helper(authenticate => sub {
-        my ($c, $user, $pass) = @_;
-        if (my $uid = $validate_user_cb->($c, $user, $pass)) {
+        my ($c, $user, $pass, $extradata) = @_;
+        if (my $uid = $validate_user_cb->($c, $user, $pass, $extradata)) {
             $c->session($session_key => $uid);
             $c->stash->{$our_stash_key}->{user} = $load_user_cb->($c, $uid);
             return 1;
@@ -79,17 +79,17 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
         'validate_user' => sub { ... },
     });
 
-    if ($self->authenticate('username', 'password')) {
+    if ($self->authenticate('username', 'password', { optional => 'extra data stuff' })) {
         ... 
     }
 
 
 =head1 METHODS
 
-=head2 authenticate($username, $password)
+=head2 authenticate($username, $password, $extra_data_hashref)
 
 Authenticate will use the supplied load_user and validate_user subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.
-Returns true when the user has been successfully authenticated, false otherwise.
+Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref, 
 
 =head2 user_exists
 
@@ -141,7 +141,7 @@ either a user object (it can be a hashref, arrayref, or a blessed object) or und
 User validation is what happens when we need to authenticate someone. The coderef you pass to the validate_user configuration key has the following signatre:
 
     sub {
-        my ($app, $username, $password) = @_;
+        my ($app, $username, $password, $extradata) = @_;
         ...
         return $uid;
     }
