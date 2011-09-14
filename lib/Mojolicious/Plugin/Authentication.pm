@@ -88,8 +88,8 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head2 authenticate($username, $password, $extra_data_hashref)
 
-Authenticate will use the supplied load_user and validate_user subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.
-Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref, 
+Authenticate will use the supplied C<load_user> and C<validate_user> subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.
+Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref.
 
 =head2 user_exists
 
@@ -109,9 +109,9 @@ The following options can be set for the plugin:
 
 =over 4
 
-=item load_user (REQUIRED) A coderef for user loading (see USER LOADING)
+=item load_user (REQUIRED) A coderef for user loading (see L</"USER LOADING">)
 
-=item validate_user (REQUIRED) A coderef for user validation (see USER VALIDATION)
+=item validate_user (REQUIRED) A coderef for user validation (see L</"USER VALIDATION">)
 
 =item session_key (optional) The name of the session key
 
@@ -133,12 +133,12 @@ The coderef you pass to the load_user configuration key has the following signat
         return $user;
     }
 
-The uid is the value that was originally returned from the validate_user coderef. You must return
+The uid is the value that was originally returned from the C<validate_user> coderef. You must return
 either a user object (it can be a hashref, arrayref, or a blessed object) or undef. 
 
 =head1 USER VALIDATION
 
-User validation is what happens when we need to authenticate someone. The coderef you pass to the validate_user configuration key has the following signature:
+User validation is what happens when we need to authenticate someone. The coderef you pass to the C<validate_user> configuration key has the following signature:
 
     sub {
         my ($app, $username, $password, $extradata) = @_;
@@ -150,7 +150,7 @@ You must return either a user id or undef. The user id can be numerical or a str
 
 =head1 EXAMPLES
 
-For a code example using this, see the t/01-functional.t test, it uses Mojolicious::Lite and this plugin.
+For a code example using this, see the F<t/01-functional.t test>, it uses L<Mojolicious::Lite> and this plugin.
 
 =head1 ROUTING VIA CONDITION
 
@@ -178,7 +178,7 @@ If you want to be able to send people to a login page, you will have to use the 
 
 =head1 SEE ALSO
 
-L<Mojolicious::Sessions>
+L<Mojolicious::Sessions>, L<Mojocast 3: Authentication|http://mojocasts.com/e3#>
 
 =head1 AUTHOR
 
@@ -221,6 +221,9 @@ Andrew Parker
 
 Mirko Westermeier (memowe) 
     -   For doing some (much needed) code cleanup
+
+Terrence Brannon (metaperl)
+    -   Documentation patches
 
 =head1 LICENSE AND COPYRIGHT
 
