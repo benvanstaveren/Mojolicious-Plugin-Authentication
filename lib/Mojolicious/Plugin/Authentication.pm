@@ -138,7 +138,7 @@ either a user object (it can be a hashref, arrayref, or a blessed object) or und
 
 =head1 USER VALIDATION
 
-User validation is what happens when we need to authenticate someone. The coderef you pass to the validate_user configuration key has the following signatre:
+User validation is what happens when we need to authenticate someone. The coderef you pass to the validate_user configuration key has the following signature:
 
     sub {
         my ($app, $username, $password, $extradata) = @_;
