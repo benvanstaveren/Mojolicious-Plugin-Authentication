@@ -30,7 +30,7 @@ plugin 'authentication', {
         my $password = shift || '';
         my $extradata = shift || {};
 
-        return 'useridwithextradata' if($username eq 'foo' && $password eq 'bar' && $extradata->{'ohnoes'} eq 'itsameme');
+        return 'useridwithextradata' if($username eq 'foo' && $password eq 'bar' && ( $extradata->{'ohnoes'} || '' ) eq 'itsameme');
         return 'userid' if($username eq 'foo' && $password eq 'bar');
         return undef;
     },
