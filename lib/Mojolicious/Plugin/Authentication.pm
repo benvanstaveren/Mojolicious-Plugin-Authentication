@@ -11,45 +11,84 @@ sub register {
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
-    my $session_key      = $args->{session_key} || 'auth_data';
-    my $our_stash_key    = $args->{stash_key}   || '__authentication__'; 
-    my $load_user_cb     = $args->{load_user};
-    my $validate_user_cb = $args->{validate_user};
+    my $lazy_mode         = $args->{lazy_mode}   || 0;
+    my $session_key       = $args->{session_key} || 'auth_data';
+    my $our_stash_key     = $args->{stash_key}   || '__authentication__';
+    my $load_user_cb      = $args->{load_user};
+    my $validate_user_cb  = $args->{validate_user};
+
+    my $user_loader_sub = sub {
+        my $c = shift;
+
+        if (my $uid = $c->session($session_key)) {
+            my $user = $load_user_cb->($c, $uid);
+            if ($user) {
+                $c->stash($our_stash_key => { user => $user });
+            }
+            elsif ($lazy_mode) {
+                $c->stash($our_stash_key => { no_user => 1 });
+            }
+        }
+    };
+
+    my $user_stash_extractor_sub = sub {
+        my $c = shift;
+        my $is_return_binary = shift || 0;
+
+        if (
+            $lazy_mode
+            && !(
+                defined($c->stash($our_stash_key))
+                && ($c->stash($our_stash_key)->{no_user}
+                    || defined($c->stash($our_stash_key)->{user}))
+            )
+          )
+        {
+            $user_loader_sub->($c);
+        }
+
+        my $user_def = defined($c->stash($our_stash_key))
+                          && defined($c->stash($our_stash_key)->{user});
+
+        return $is_return_binary
+          ? ($user_def ? 1 : 0)
+          : ($user_def ? $c->stash($our_stash_key)->{user} : undef);
+
+    };
+
+    if (!$lazy_mode) {
+        $app->hook(before_dispatch => $user_loader_sub);
+    }
 
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = @_;
         return ($required && $c->user_exists) ? 1 : 0;
     });
 
-    $app->hook(before_dispatch => sub {
-        my ($c) = @_;
-        if (my $uid = $c->session($session_key)) {
-            my $user = $load_user_cb->($c, $uid);
-            $c->stash($our_stash_key => { user => $user }) if $user;
-        }
+    $app->routes->add_condition(signed => sub {
+        my ($r, $c, $captures, $required) = @_;
+        return ($required && $c->signature_exists) ? 1 : 0;
+    });
+
+    $app->helper(signature_exists => sub {
+        my $c = shift;
+        return $c->session($session_key) ? 1 : 0;
     });
 
     $app->helper(user_exists => sub {
         my $c = shift;
-        return (
-            defined($c->stash($our_stash_key)) && 
-            defined($c->stash($our_stash_key)->{user})
-            ) ? 1 : 0;
-
+        return $user_stash_extractor_sub->($c, 1);
     });
 
     $app->helper(user => sub {
         my $c = shift;
-        return ($c->stash($our_stash_key))
-            ? $c->stash($our_stash_key)->{user}
-            : undef;
+        return $user_stash_extractor_sub->($c);
     });
 
     $app->helper(logout => sub {
         my $c = shift;
         delete $c->stash->{$our_stash_key};
         delete $c->session->{$session_key};
-
     });
 
     $app->helper(authenticate => sub {
@@ -74,6 +113,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
     use Mojolicious::Plugin::Authentication
 
     $self->plugin('authentication' => {
+        'lazy_mode' => 1,
         'session_key' => 'wickedapp',
         'load_user' => sub { ... },
         'validate_user' => sub { ... },
@@ -98,6 +138,11 @@ Returns true if an authenticated user exists, false otherwise.
 
 Returns the user object as it was returned from the supplied C<load_user> subroutine ref.
 
+=head2 signature_exists
+
+Returns true if uid signature exist on client (in cookies), false otherwise.
+Warning: non-secure check at all! Use this method only for 'fast&dirty' lookup to client cookies. May be helpfully in some cases (for example - in counting 'guest'/'logged users' or for additional non-confidential information for 'logged users' but not for 'guest').
+
 =head2 logout
 
 Removes the session data for authentication, and effectively logs a user out.
@@ -113,6 +158,8 @@ The following options can be set for the plugin:
 =item validate_user (REQUIRED) A coderef for user validation (see L</"USER VALIDATION">)
 
 =item session_key (optional) The name of the session key
+
+=item lazy_mode (optional) Turn on 'lazy mode' - user data to be loaded only if it be used. May reduce site latency in some cases.
 
 =back 
 
@@ -148,7 +195,7 @@ You must return either a user id or undef. The user id can be numerical or a str
 
 =head1 EXAMPLES
 
-For a code example using this, see the F<t/01-functional.t test>, it uses L<Mojolicious::Lite> and this plugin.
+For a code example using this, see the F<t/01-functional.t> and F<t/02-functional_lazy.t> tests, it uses L<Mojolicious::Lite> and this plugin.
 
 =head1 ROUTING VIA CONDITION
 
@@ -160,6 +207,12 @@ This plugin also exports a routing condition you can use in order to limit acces
     $authenticated_only->route('online')->to('members#online');
 
 If someone is not authenticated, these routes will not be considered by the dispatcher and unless you have set up a catch-all route, a 404 Not Found will be generated instead. 
+
+And another condition for fast and unsecured division for users, having signature (without validation it). This method just checkout client cookies for uid data existing.
+
+    $r->route('/foo')->over(signed => 1)->to('mycontroller#foo');
+
+This behavior as is authenticated.
 
 =head1 ROUTING VIA CALLBACK
 
@@ -174,6 +227,17 @@ If you want to be able to send people to a login page, you will have to use the 
 
     $members_only->route('online')->to('members#online');
 
+Lazy and unsecured complement:
+
+    my $members_only = $r->route('/unimportant')->to(cb => sub {
+        my $self = shift;
+
+        $self->redirect_to('/login') and return 0 unless($self->signature_exists);
+        return 1;
+    });
+
+    $members_only->route('pages')->to('unimportant#pages');
+
 =head1 ROUTING VIA BRIDGE
 
 If you want to be able to send people to a login page, you will have to use the following:
@@ -186,6 +250,14 @@ And in your Auth controller you would put:
     sub check {
         my $self = shift;
         $self->redirect_to('/login') and return 0 unless($self->user_exists);
+        return 1;
+    });
+
+Lazy and unsecured complement:
+
+    sub check {
+        my $self = shift;
+        $self->redirect_to('/login') and return 0 unless($self->signature_exists);
         return 1;
     });
 
