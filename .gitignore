@@ -18,3 +18,5 @@ META.json
 META.yml
 MYMETA.*
 *.swp
+*.bbprojectd
+.DS_Store
