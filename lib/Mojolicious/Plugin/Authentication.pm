@@ -140,8 +140,9 @@ Returns the user object as it was returned from the supplied C<load_user> subrou
 
 =head2 signature_exists
 
-Returns true if uid signature exist on client (in cookies), false otherwise.
-Warning: non-secure check at all! Use this method only for 'fast&dirty' lookup to client cookies. May be helpfully in some cases (for example - in counting 'guest'/'logged users' or for additional non-confidential information for 'logged users' but not for 'guest').
+Returns true if uid signature exist on the client side (in cookies), false otherwise.
+
+Warning: non-secure check! Use this method only for a "fast & dirty"  lookup to see if the client has the proper cookies. May be helpful in some cases (for example - in counting 'guest'/'logged users' or for additional non-confidential information for 'logged users' but not for 'guest').
 
 =head2 logout
 
@@ -208,11 +209,11 @@ This plugin also exports a routing condition you can use in order to limit acces
 
 If someone is not authenticated, these routes will not be considered by the dispatcher and unless you have set up a catch-all route, a 404 Not Found will be generated instead. 
 
-And another condition for fast and unsecured division for users, having signature (without validation it). This method just checkout client cookies for uid data existing.
+And another condition for fast and unsecured checking for users, having a signature (without validating it). This method just checks client cookies for uid data existing.
 
     $r->route('/foo')->over(signed => 1)->to('mycontroller#foo');
 
-This behavior as is authenticated.
+This behavior is similar to the "authenticated" condition.
 
 =head1 ROUTING VIA CALLBACK
 
@@ -227,7 +228,7 @@ If you want to be able to send people to a login page, you will have to use the 
 
     $members_only->route('online')->to('members#online');
 
-Lazy and unsecured complement:
+Lazy and unsecured methods:
 
     my $members_only = $r->route('/unimportant')->to(cb => sub {
         my $self = shift;
@@ -253,7 +254,7 @@ And in your Auth controller you would put:
         return 1;
     });
 
-Lazy and unsecured complement:
+Lazy and unsecured methods:
 
     sub check {
         my $self = shift;
@@ -308,6 +309,9 @@ Mirko Westermeier (memowe)
 
 Terrence Brannon (metaperl)
     -   Documentation patches
+
+Karpich Dmitry (meettya)
+    -   lazy_mode and signature_exists functionality, including a test and documentation
 
 =head1 LICENSE AND COPYRIGHT
 
