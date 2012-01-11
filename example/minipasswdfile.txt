@@ -1,0 +1,6 @@
+## format: username:password:privilegelevel:full name
+## last updated on Wed Jan 11 08:29:04 2012, 1326245344
+sigmund:psycho:instructor:Sigmund Freud:
+albert:relativity:instructor:Albert Einstein:
+dummy:knownothing:student:Not So Anonymous Student:
+richard:qed:instructor:Richard Feynman:
