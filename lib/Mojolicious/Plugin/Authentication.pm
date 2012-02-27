@@ -11,7 +11,7 @@ sub register {
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
-    my $lazy_mode         = $args->{lazy_mode}   || 0;
+    my $autoload_user    = defined($args->{autoload_user}) ? $args->{autoload_user} : 1;
     my $session_key       = $args->{session_key} || 'auth_data';
     my $our_stash_key     = $args->{stash_key}   || '__authentication__';
     my $load_user_cb      = $args->{load_user};
@@ -26,7 +26,7 @@ sub register {
             if ($user) {
                 $c->stash($our_stash_key => { user => $user });
             }
-            elsif ($lazy_mode) {
+            else {
                 # cache result that user does not exist
                 $c->stash($our_stash_key => { no_user => 1 });
             }
@@ -37,14 +37,12 @@ sub register {
     my $user_stash_extractor_sub = sub {
         my $c = shift;
 
-        if (
-            $lazy_mode
-            && !(
+        if ( !(
                 defined($c->stash($our_stash_key))
                 && ($c->stash($our_stash_key)->{no_user}
                     || defined($c->stash($our_stash_key)->{user}))
+              )
             )
-          )
         {
             $user_loader_sub->($c);
         }
@@ -56,7 +54,7 @@ sub register {
 
     };
 
-    if (!$lazy_mode) {
+    if ($autoload_user) {
         $app->hook(before_dispatch => $user_loader_sub);
     }
 
@@ -68,6 +66,13 @@ sub register {
     $app->routes->add_condition(signed => sub {
         my ($r, $c, $captures, $required) = @_;
         return ($required && $c->signature_exists) ? 1 : 0;
+    });
+
+    $app->helper(reload_user => sub {
+        my $c = shift;
+        # Clear stash to force a reload of the user object
+        delete $c->stash->{$our_stash_key};
+        return $user_stash_extractor_sub->($c);
     });
 
     $app->helper(signature_exists => sub {
@@ -113,7 +118,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
     use Mojolicious::Plugin::Authentication
 
     $self->plugin('authentication' => {
-        'lazy_mode' => 1,
+        'autoload_user' => 1,
         'session_key' => 'wickedapp',
         'load_user' => sub { ... },
         'validate_user' => sub { ... },
@@ -138,6 +143,10 @@ Returns true if an authenticated user exists, false otherwise.
 
 Returns the user object as it was returned from the supplied C<load_user> subroutine ref.
 
+=head2 reload_user
+
+Flushes the current user object and then returns user().
+
 =head2 signature_exists
 
 Returns true if uid signature exist on the client side (in cookies), false otherwise.
@@ -160,7 +169,7 @@ The following options can be set for the plugin:
 
 =item session_key (optional) The name of the session key
 
-=item lazy_mode (optional) Turn on 'lazy mode' - user data to be loaded only if it be used. May reduce site latency in some cases.
+=item autoload_user (optional) Turn on/off automatic loading of user data - user data can be loaded only if it be used. May reduce site latency in some cases.
 
 =back 
 

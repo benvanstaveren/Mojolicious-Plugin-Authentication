@@ -13,7 +13,7 @@ use Mojolicious::Lite;
 use Test::Mojo;
 
 plugin 'authentication', {
-    lazy_mode => 1,
+    autoload_user => 0,
     load_user => sub {
         my $self = shift;
         my $uid  = shift;
