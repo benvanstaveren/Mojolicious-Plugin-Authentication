@@ -53,7 +53,7 @@ post '/login' => sub {
 
 get '/authonly' => sub {
     my $self = shift;
-    $self->render( text => ( $self->user_exists )
+    $self->render( text => ( $self->is_user_authenticated )
         ? 'authenticated'
         : 'not authenticated' );
 };

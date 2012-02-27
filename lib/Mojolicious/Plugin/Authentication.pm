@@ -24,7 +24,7 @@ sub register {
         if (my $uid = $c->session($session_key)) {
             my $user = $load_user_cb->($c, $uid);
             if ($user) {
-                $c->stash($our_stash_key => { user => $user });
+                $c->stash($our_stash_key => { current_user => $user });
             }
             else {
                 # cache result that user does not exist
@@ -40,7 +40,7 @@ sub register {
         if ( !(
                 defined($c->stash($our_stash_key))
                 && ($c->stash($our_stash_key)->{no_user}
-                    || defined($c->stash($our_stash_key)->{user}))
+                    || defined($c->stash($our_stash_key)->{current_user}))
               )
             )
         {
@@ -48,9 +48,9 @@ sub register {
         }
 
         my $user_def = defined($c->stash($our_stash_key))
-                          && defined($c->stash($our_stash_key)->{user});
+                          && defined($c->stash($our_stash_key)->{current_user});
 
-        return $user_def ? $c->stash($our_stash_key)->{user} : undef;
+        return $user_def ? $c->stash($our_stash_key)->{current_user} : undef;
 
     };
 
@@ -60,7 +60,7 @@ sub register {
 
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = @_;
-        return ($required && $c->user_exists) ? 1 : 0;
+        return ($required && $c->is_user_authenticated) ? 1 : 0;
     });
 
     $app->routes->add_condition(signed => sub {
@@ -68,11 +68,16 @@ sub register {
         return ($required && $c->signature_exists) ? 1 : 0;
     });
 
+    my $current_user = sub {
+        my $c = shift;
+        return $user_stash_extractor_sub->($c);
+    };
+
     $app->helper(reload_user => sub {
         my $c = shift;
         # Clear stash to force a reload of the user object
         delete $c->stash->{$our_stash_key};
-        return $user_stash_extractor_sub->($c);
+        return $current_user->($c);
     });
 
     $app->helper(signature_exists => sub {
@@ -80,15 +85,13 @@ sub register {
         return $c->session($session_key) ? 1 : 0;
     });
 
-    $app->helper(user_exists => sub {
+
+    $app->helper(is_user_authenticated => sub {
         my $c = shift;
-        return defined($user_stash_extractor_sub->($c)) ? 1 : 0;
+        return defined($current_user->($c)) ? 1 : 0;
     });
 
-    $app->helper(user => sub {
-        my $c = shift;
-        return $user_stash_extractor_sub->($c);
-    });
+    $app->helper(current_user => $current_user);
 
     $app->helper(logout => sub {
         my $c = shift;
@@ -100,8 +103,11 @@ sub register {
         my ($c, $user, $pass, $extradata) = @_;
         if (my $uid = $validate_user_cb->($c, $user, $pass, $extradata)) {
             $c->session($session_key => $uid);
-            $c->stash->{$our_stash_key}->{user} = $load_user_cb->($c, $uid);
-            return 1;
+            # Clear stash to force reload of any already loaded user object
+            delete $c->stash->{$our_stash_key};
+            return 1 if defined( $current_user->($c) );
+            # Failed to load user object. Perhaps some kind of race condition or other error?
+            return;
         }
         return;
     });
@@ -135,11 +141,11 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 Authenticate will use the supplied C<load_user> and C<validate_user> subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.  Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref, it will be passed to your C<validate_user> subroutine as-is.
 
-=head2 user_exists
+=head2 is_user_authenticated
 
-Returns true if an authenticated user exists, false otherwise.
+Returns true if current_user() returns some valid object, false otherwise.
 
-=head2 user
+=head2 current_user
 
 Returns the user object as it was returned from the supplied C<load_user> subroutine ref.
 
@@ -231,7 +237,7 @@ If you want to be able to send people to a login page, you will have to use the 
     my $members_only = $r->route('/members')->to(cb => sub {
         my $self = shift;
 
-        $self->redirect_to('/login') and return 0 unless($self->user_exists);
+        $self->redirect_to('/login') and return 0 unless($self->is_user_authenticated);
         return 1;
     });
 
@@ -259,7 +265,7 @@ And in your Auth controller you would put:
 
     sub check {
         my $self = shift;
-        $self->redirect_to('/login') and return 0 unless($self->user_exists);
+        $self->redirect_to('/login') and return 0 unless($self->is_user_authenticated);
         return 1;
     });
 

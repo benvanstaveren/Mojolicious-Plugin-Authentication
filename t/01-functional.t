@@ -60,7 +60,7 @@ post '/login2' => sub {
 
 get '/authonly' => sub {
     my $self = shift;
-    $self->render(text => ($self->user_exists) ? 'authenticated' : 'not authenticated');
+    $self->render(text => ($self->is_user_authenticated) ? 'authenticated' : 'not authenticated');
 };
 
 get '/condition/authonly' => (authenticated => 1) => sub {
