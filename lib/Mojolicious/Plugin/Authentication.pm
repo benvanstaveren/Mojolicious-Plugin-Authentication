@@ -17,6 +17,7 @@ sub register {
     my $load_user_cb      = $args->{load_user};
     my $validate_user_cb  = $args->{validate_user};
 
+    # Unconditionally load the user based on uid in session
     my $user_loader_sub = sub {
         my $c = shift;
 
@@ -26,11 +27,13 @@ sub register {
                 $c->stash($our_stash_key => { user => $user });
             }
             elsif ($lazy_mode) {
+                # cache result that user does not exist
                 $c->stash($our_stash_key => { no_user => 1 });
             }
         }
     };
 
+    # Fetch the current user object from the stash - loading it if not already loaded
     my $user_stash_extractor_sub = sub {
         my $c = shift;
 
