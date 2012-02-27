@@ -33,7 +33,6 @@ sub register {
 
     my $user_stash_extractor_sub = sub {
         my $c = shift;
-        my $is_return_binary = shift || 0;
 
         if (
             $lazy_mode
@@ -50,9 +49,7 @@ sub register {
         my $user_def = defined($c->stash($our_stash_key))
                           && defined($c->stash($our_stash_key)->{user});
 
-        return $is_return_binary
-          ? ($user_def ? 1 : 0)
-          : ($user_def ? $c->stash($our_stash_key)->{user} : undef);
+        return $user_def ? $c->stash($our_stash_key)->{user} : undef;
 
     };
 
@@ -77,7 +74,7 @@ sub register {
 
     $app->helper(user_exists => sub {
         my $c = shift;
-        return $user_stash_extractor_sub->($c, 1);
+        return defined($user_stash_extractor_sub->($c)) ? 1 : 0;
     });
 
     $app->helper(user => sub {
