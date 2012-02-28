@@ -11,11 +11,12 @@ sub register {
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
-    my $autoload_user    = defined($args->{autoload_user}) ? $args->{autoload_user} : 1;
+    my $autoload_user     = defined($args->{autoload_user}) ? $args->{autoload_user} : 1;
     my $session_key       = $args->{session_key} || 'auth_data';
     my $our_stash_key     = $args->{stash_key}   || '__authentication__';
     my $load_user_cb      = $args->{load_user};
     my $validate_user_cb  = $args->{validate_user};
+    my $current_user_fn   = $args->{current_user_fn} || 'current_user';
 
     # Unconditionally load the user based on uid in session
     my $user_loader_sub = sub {
@@ -91,7 +92,7 @@ sub register {
         return defined($current_user->($c)) ? 1 : 0;
     });
 
-    $app->helper(current_user => $current_user);
+    $app->helper("$current_user_fn" => $current_user);
 
     $app->helper(logout => sub {
         my $c = shift;
@@ -128,6 +129,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
         'session_key' => 'wickedapp',
         'load_user' => sub { ... },
         'validate_user' => sub { ... },
+        'current_user_fn' => 'user', # compatibility with old code
     });
 
     if ($self->authenticate('username', 'password', { optional => 'extra data stuff' })) {
@@ -176,6 +178,8 @@ The following options can be set for the plugin:
 =item session_key (optional) The name of the session key
 
 =item autoload_user (optional) Turn on/off automatic loading of user data - user data can be loaded only if it be used. May reduce site latency in some cases.
+
+=item current_user_fn (optional) Set the name for the current_user() helper function
 
 =back 
 
