@@ -24,7 +24,7 @@ sub register {
         if (my $uid = $c->session($session_key)) {
             my $user = $load_user_cb->($c, $uid);
             if ($user) {
-                $c->stash($our_stash_key => { current_user => $user });
+                $c->stash($our_stash_key => { user => $user });
             }
             else {
                 # cache result that user does not exist
@@ -40,7 +40,7 @@ sub register {
         if ( !(
                 defined($c->stash($our_stash_key))
                 && ($c->stash($our_stash_key)->{no_user}
-                    || defined($c->stash($our_stash_key)->{current_user}))
+                    || defined($c->stash($our_stash_key)->{user}))
               )
             )
         {
@@ -48,9 +48,9 @@ sub register {
         }
 
         my $user_def = defined($c->stash($our_stash_key))
-                          && defined($c->stash($our_stash_key)->{current_user});
+                          && defined($c->stash($our_stash_key)->{user});
 
-        return $user_def ? $c->stash($our_stash_key)->{current_user} : undef;
+        return $user_def ? $c->stash($our_stash_key)->{user} : undef;
 
     };
 
