@@ -11,7 +11,7 @@ sub register {
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
-    my $autoload_user     = defined($args->{autoload_user}) ? $args->{autoload_user} : 1;
+    my $autoload_user     = defined($args->{autoload_user}) ? $args->{autoload_user} : 0;
     my $session_key       = $args->{session_key} || 'auth_data';
     my $our_stash_key     = $args->{stash_key}   || '__authentication__';
     my $load_user_cb      = $args->{load_user};
