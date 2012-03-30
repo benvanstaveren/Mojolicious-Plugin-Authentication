@@ -11,6 +11,11 @@ sub register {
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
+    if(defined($args->{lazy})) {
+        warn __PACKAGE__, ': the "lazy" option is deprecated, use "autoload_user" instead', "\n" 
+        $args->{autoload_user} = delete($args->{lazy});
+    }
+
     my $autoload_user     = defined($args->{autoload_user}) ? $args->{autoload_user} : 0;
     my $session_key       = $args->{session_key} || 'auth_data';
     my $our_stash_key     = $args->{stash_key}   || '__authentication__';
@@ -55,9 +60,7 @@ sub register {
 
     };
 
-    if ($autoload_user) {
-        $app->hook(before_dispatch => $user_loader_sub);
-    }
+    $app->hook(before_dispatch => $user_loader_sub) if($autoload_user);
 
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = @_;
@@ -67,6 +70,17 @@ sub register {
     $app->routes->add_condition(signed => sub {
         my ($r, $c, $captures, $required) = @_;
         return ($required && $c->signature_exists) ? 1 : 0;
+    });
+
+    # deprecation handling
+    $app->helper(user_exists => sub {
+        warn __PACKAGE__, ': the "user_exists" helper is deprecated, use "is_user_authenticated" instead', "\n";
+        return shift->is_user_authenticated(@_);
+    });
+
+    $app->helper(user => sub {
+        warn __PACKAGE__, ': the "user" helper is deprecated, use "', $current_user_fn, '" instead', "\n";
+        return shift->$current_user_fn(@_);
     });
 
     my $current_user = sub {
@@ -85,7 +99,6 @@ sub register {
         my $c = shift;
         return $c->session($session_key) ? 1 : 0;
     });
-
 
     $app->helper(is_user_authenticated => sub {
         my $c = shift;
@@ -335,6 +348,10 @@ Karpich Dmitry (meettya)
 Ivo Welch
     -   For donating his first ever Mojolicious application that shows an example of how
         to use this module
+
+Ed W
+    -   Adding the current_user() functionality, as well as some method renaming to make things
+        a bit more sane.
 
 =head1 LICENSE AND COPYRIGHT
 

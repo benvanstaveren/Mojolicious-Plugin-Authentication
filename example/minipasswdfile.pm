@@ -1,4 +1,5 @@
-package minipasswdfile;
+package 
+    minipasswdfile;     # hide from PAUSE
 use strict;
 use warnings;
 use warnings FATAL => qw{ uninitialized };
