@@ -12,7 +12,7 @@ sub register {
         unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
 
     if(defined($args->{lazy})) {
-        warn __PACKAGE__, ': the "lazy" option is deprecated, use "autoload_user" instead', "\n" 
+        warn __PACKAGE__, ': the "lazy" option is deprecated, use "autoload_user" instead', "\n";
         $args->{autoload_user} = delete($args->{lazy});
     }
 
