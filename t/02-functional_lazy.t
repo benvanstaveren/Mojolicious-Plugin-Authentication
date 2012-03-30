@@ -13,7 +13,7 @@ use Mojolicious::Lite;
 use Test::Mojo;
 
 plugin 'authentication', {
-    lazy_mode => 1,
+    autoload_user => 0,
     load_user => sub {
         my $self = shift;
         my $uid  = shift;
@@ -53,7 +53,7 @@ post '/login' => sub {
 
 get '/authonly' => sub {
     my $self = shift;
-    $self->render( text => ( $self->user_exists )
+    $self->render( text => ( $self->is_user_authenticated )
         ? 'authenticated'
         : 'not authenticated' );
 };
