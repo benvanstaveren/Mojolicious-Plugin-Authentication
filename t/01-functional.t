@@ -82,16 +82,16 @@ $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
 $t->get_ok('/condition/authonly')->status_is(404);
 
 # let's try this
-$t->post_form_ok('/login', { u => 'fnark', p => 'fnork' })->status_is(200)->content_is('failed');
+$t->post_ok('/login' => form =>  { u => 'fnark', p => 'fnork' })->status_is(200)->content_is('failed');
 $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
 
-$t->post_form_ok('/login', { u => 'foo', p => 'bar' })->status_is(200)->content_is('ok');
+$t->post_ok('/login' => form => { u => 'foo', p => 'bar' })->status_is(200)->content_is('ok');
 $t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
 $t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated condition');
 
 $t->get_ok('/logout')->status_is(200)->content_is('logout');
 $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
 
-$t->post_form_ok('/login2', { u => 'foo', p => 'bar' })->status_is(200)->content_is('ok');
+$t->post_ok('/login2' => form => { u => 'foo', p => 'bar' })->status_is(200)->content_is('ok');
 $t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
 $t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated condition');
