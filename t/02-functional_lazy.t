@@ -90,11 +90,11 @@ $t->get_ok('/authonly/lazy')->status_is(200)
 $t->get_ok('/condition/authonly/lazy')->status_is(404);
 
 # let's try this
-$t->post_form_ok( '/login', { u => 'fnark', p => 'fnork' } )->status_is(200)
+$t->post_ok( '/login' => form => { u => 'fnark', p => 'fnork' } )->status_is(200)
   ->content_is('failed');
 $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
 
-$t->post_form_ok( '/login', { u => 'foo', p => 'bar' } )->status_is(200)
+$t->post_ok( '/login' => form => { u => 'foo', p => 'bar' } )->status_is(200)
   ->content_is('ok');
 
 # try original auth in lazy mode
