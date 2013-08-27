@@ -115,15 +115,23 @@ sub register {
 
     $app->helper(authenticate => sub {
         my ($c, $user, $pass, $extradata) = @_;
-        if (my $uid = $validate_user_cb->($c, $user, $pass, $extradata)) {
+
+        $extradata ||= {};
+
+        # if extradata contains "auto_validate", assume the passed username is in fact valid, and
+        # auto_validate contains the uid; used for oAuth and other stuff that does not work with
+        # usernames and passwords.
+        if(defined($extradata->{auto_validate})) {
+            $c->session($session_key => $uid);
+            delete $c->stash->{$our_stash_key};
+            return 1 if defined( $current_user->($c) );
+        } elsif (my $uid = $validate_user_cb->($c, $user, $pass, $extradata)) {
             $c->session($session_key => $uid);
             # Clear stash to force reload of any already loaded user object
             delete $c->stash->{$our_stash_key};
             return 1 if defined( $current_user->($c) );
-            # Failed to load user object. Perhaps some kind of race condition or other error?
-            return;
         }
-        return;
+        return undef;
     });
 }
 
@@ -154,7 +162,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head2 authenticate($username, $password, $extra_data_hashref)
 
-Authenticate will use the supplied C<load_user> and C<validate_user> subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.  Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref, it will be passed to your C<validate_user> subroutine as-is.
+Authenticate will use the supplied C<load_user> and C<validate_user> subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.  Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref, it will be passed to your C<validate_user> subroutine as-is. If the extra data hash contains a key 'auto_validate', the value of that key will be used as the UID, and authenticate will not call your validate_user callback; this can be used when working with oAuth tokens or other authentication mechnisms that do not use a local username and password form.
 
 =head2 is_user_authenticated
 
