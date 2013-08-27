@@ -122,7 +122,7 @@ sub register {
         # auto_validate contains the uid; used for oAuth and other stuff that does not work with
         # usernames and passwords.
         if(defined($extradata->{auto_validate})) {
-            $c->session($session_key => $uid);
+            $c->session($session_key => $extradata->{auto_validate});
             delete $c->stash->{$our_stash_key};
             return 1 if defined( $current_user->($c) );
         } elsif (my $uid = $validate_user_cb->($c, $user, $pass, $extradata)) {
