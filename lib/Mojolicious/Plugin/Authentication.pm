@@ -283,7 +283,7 @@ Lazy and unsecured methods:
 
 If you want to be able to send people to a login page, you will have to use the following:
 
-    my $auth_bridge = $r->bridge('/members')->to('auth#check');
+    my $auth_bridge = $r->under('/members')->to('auth#check');
     $auth_bridge->route('/list')->to('members#list'); # only visible to logged in users
 
 And in your Auth controller you would put:
