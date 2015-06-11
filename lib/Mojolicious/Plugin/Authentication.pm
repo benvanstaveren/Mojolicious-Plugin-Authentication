@@ -120,7 +120,7 @@ sub register {
 
         # if extradata contains "auto_validate", assume the passed username is in fact valid, and
         # auto_validate contains the uid; used for oAuth and other stuff that does not work with
-        # usernames and passwords.
+        # usernames and passwords; use this with extreme care if you must
         if(defined($extradata->{auto_validate})) {
             $c->session($session_key => $extradata->{auto_validate});
             delete $c->stash->{$our_stash_key};
