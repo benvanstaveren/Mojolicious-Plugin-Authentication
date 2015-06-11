@@ -162,7 +162,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head2 authenticate($username, $password, $extra_data_hashref)
 
-Authenticate will use the supplied C<load_user> and C<validate_user> subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.  Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref, it will be passed to your C<validate_user> subroutine as-is. If the extra data hash contains a key 'auto_validate', the value of that key will be used as the UID, and authenticate will not call your validate_user callback; this can be used when working with oAuth tokens or other authentication mechnisms that do not use a local username and password form.
+Authenticate will use the supplied C<load_user> and C<validate_user> subroutine refs to see whether a user exists with the given username and password, and will set up the session accordingly.  Returns true when the user has been successfully authenticated, false otherwise. You can pass additional data along in the extra_data hashref, it will be passed to your C<validate_user> subroutine as-is. If the extra data hash contains a key 'auto_validate', the value of that key will be used as the UID, and authenticate will not call your validate_user callback; this can be used when working with oAuth tokens or other authentication mechanisms that do not use a local username and password form.
 
 =head2 is_user_authenticated
 
@@ -283,7 +283,7 @@ Lazy and unsecured methods:
 
 If you want to be able to send people to a login page, you will have to use the following:
 
-    my $auth_bridge = $r->bridge('/members')->to('auth#check');
+    my $auth_bridge = $r->under('/members')->to('auth#check');
     $auth_bridge->route('/list')->to('members#list'); # only visible to logged in users
 
 And in your Auth controller you would put:
