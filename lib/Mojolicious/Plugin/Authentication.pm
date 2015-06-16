@@ -1,3 +1,5 @@
+use warnings;
+use strict;
 package Mojolicious::Plugin::Authentication;
 use Mojo::Base 'Mojolicious::Plugin';
 
