@@ -368,9 +368,12 @@ Ed W
 SailingYYC (Github)
     -   For reporting an issue with routing conditions; I really should not code while sleepy, brainfarts imminent! 
 
+carragom (Github)
+    -   For fixing the bug that'd consider an uid of 0 or "0" to be a problem
+
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011-2012 Ben van Staveren.
+Copyright 2011-2015 Ben van Staveren.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
