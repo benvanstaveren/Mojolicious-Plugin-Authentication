@@ -28,8 +28,9 @@ sub register {
     # Unconditionally load the user based on uid in session
     my $user_loader_sub = sub {
         my $c = shift;
+        my $uid = $c->session($session_key);
 
-        if (my $uid = $c->session($session_key)) {
+        if (defined($uid)) {
             my $user = $load_user_cb->($c, $uid);
             if ($user) {
                 $c->stash($our_stash_key => { user => $user });
@@ -119,6 +120,7 @@ sub register {
         my ($c, $user, $pass, $extradata) = @_;
 
         $extradata ||= {};
+        my $uid = $validate_user_cb->($c, $user, $pass, $extradata);
 
         # if extradata contains "auto_validate", assume the passed username is in fact valid, and
         # auto_validate contains the uid; used for oAuth and other stuff that does not work with
@@ -127,7 +129,7 @@ sub register {
             $c->session($session_key => $extradata->{auto_validate});
             delete $c->stash->{$our_stash_key};
             return 1 if defined( $current_user->($c) );
-        } elsif (my $uid = $validate_user_cb->($c, $user, $pass, $extradata)) {
+        } elsif (defined($uid)) {
             $c->session($session_key => $uid);
             # Clear stash to force reload of any already loaded user object
             delete $c->stash->{$our_stash_key};
