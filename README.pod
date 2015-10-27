@@ -63,6 +63,8 @@ The following options can be set for the plugin:
 
 =item current_user_fn (optional) Set the name for the current_user() helper function
 
+=item fail_render (optional) The hashref passed to L<Mojolicious::Controller/render> function used when routing L</"ROUTING VIA CONDITION"> fails.
+
 =back
 
 In order to set the session expiry time, use the following in your startup routine:
@@ -115,6 +117,11 @@ And another condition for fast and unsecured checking for users, having a signat
     $r->route('/foo')->over(signed => 1)->to('mycontroller#foo');
 
 This behavior is similar to the "authenticated" condition.
+
+If you want to control what's sent to the client when the condition fails, you can use the C<fail_render> parameter with a value similar to this:
+
+    fail_render => { status => 401, json => { message => 'Unauthorized' } }
+
 
 =head1 ROUTING VIA CALLBACK
 
