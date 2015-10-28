@@ -1,0 +1,9 @@
+language: perl
+sudo: false
+perl:
+- "5.20"
+- "5.16"
+install:
+- "cpanm -n Test::More Test::CheckManifest Test::Mojo Mojolicious"
+notifications:
+  email: false
