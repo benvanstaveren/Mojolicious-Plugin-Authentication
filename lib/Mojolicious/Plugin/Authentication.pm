@@ -47,6 +47,12 @@ sub register {
     my $user_stash_extractor_sub = sub {
         my $c = shift;
 
+        # Allow setting the current_user
+        if ( @_ ) {
+            $c->stash($our_stash_key => { user => $_[0] });
+            return;
+        }
+
         if ( !(
                 defined($c->stash($our_stash_key))
                 && ($c->stash($our_stash_key)->{no_user}
@@ -90,8 +96,7 @@ sub register {
     });
 
     my $current_user = sub {
-        my $c = shift;
-        return $user_stash_extractor_sub->($c);
+        return $user_stash_extractor_sub->(@_);
     };
 
     $app->helper(reload_user => sub {
@@ -178,6 +183,11 @@ Returns true if current_user() returns some valid object, false otherwise.
 =head2 current_user
 
 Returns the user object as it was returned from the supplied C<load_user> subroutine ref.
+
+You can change the current user by passing it in, but be careful: This
+bypasses the authentication. This is useful if you have multiple ways to
+authenticate users and want to re-use authorization checks that use
+C<current_user>.
 
 =head2 reload_user
 
