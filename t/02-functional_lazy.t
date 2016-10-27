@@ -6,7 +6,7 @@ use warnings;
 BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
 use Test::More;
-plan tests => 38;
+plan tests => 40;
 
 # testing code starts here
 use Mojolicious::Lite;
@@ -27,10 +27,9 @@ plugin 'authentication', {
         return undef;
     },
     validate_user => sub {
-        my $self      = shift;
-        my $username  = shift || '';
-        my $password  = shift || '';
-        my $extradata = shift || {};
+        my ($self, $username, $password, $extradata) = @_;
+
+        die unless defined $password;
 
         return 'userid' if ( $username eq 'foo' && $password eq 'bar' );
         return undef;
@@ -82,6 +81,18 @@ get '/logout' => sub {
     $self->render( text => 'logout' );
 };
 
+get '/auto_validate' => sub {
+    my $self = shift;
+
+    eval { $self->authenticate( undef, undef, { auto_validate => 'userid' } ) };
+    if ($@) {
+        $self->reply->exception( 'failed' );
+    }
+    else {
+        $self->render( text => 'ok' );
+    }
+};
+
 my $t = Test::Mojo->new;
 
 $t->get_ok('/')->status_is(200)->content_is('index page');
@@ -111,3 +122,5 @@ $t->get_ok('/logout')->status_is(200)->content_is('logout');
 $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
 $t->get_ok('/authonly/lazy')->status_is(200)
   ->content_is('sign not authenticated');
+
+$t->get_ok('/auto_validate')->status_is(200);
