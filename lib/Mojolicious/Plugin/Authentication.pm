@@ -10,21 +10,23 @@ sub register {
     $args ||= {};
 
     die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n"
-        unless $args->{load_user} && ref($args->{load_user}) eq 'CODE';
+        unless $args->{load_user} and ref $args->{load_user} eq 'CODE';
+
     die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
-        unless $args->{validate_user} && ref($args->{validate_user}) eq 'CODE';
+        unless $args->{validate_user} and ref $args->{validate_user} eq 'CODE';
+
 
     if(defined($args->{lazy})) {
         warn __PACKAGE__, ': the "lazy" option is deprecated, use "autoload_user" instead', "\n";
         $args->{autoload_user} = delete($args->{lazy});
     }
 
-    my $autoload_user     = defined($args->{autoload_user}) ? $args->{autoload_user} : 0;
-    my $session_key       = $args->{session_key} || 'auth_data';
-    my $our_stash_key     = $args->{stash_key}   || '__authentication__';
+    my $autoload_user     = $args->{autoload_user}   // 0;
+    my $session_key       = $args->{session_key}     || 'auth_data';
+    my $our_stash_key     = $args->{stash_key}       || '__authentication__';
+    my $current_user_fn   = $args->{current_user_fn} || 'current_user';
     my $load_user_cb      = $args->{load_user};
     my $validate_user_cb  = $args->{validate_user};
-    my $current_user_fn   = $args->{current_user_fn} || 'current_user';
     my $fail_render       = $args->{fail_render};
 
     # Unconditionally load the user based on uid in session
@@ -46,43 +48,34 @@ sub register {
 
     # Fetch the current user object from the stash - loading it if not already loaded
     my $user_stash_extractor_sub = sub {
-        my $c = shift;
+        my ($c, $user) = @_;
 
         # Allow setting the current_user
-        if ( @_ ) {
-            $c->stash($our_stash_key => { user => $_[0] });
+        if ( defined $user ) {
+            $c->stash($our_stash_key => { user => $user });
             return;
         }
 
-        if ( !(
-                defined($c->stash($our_stash_key))
-                && ($c->stash($our_stash_key)->{no_user}
-                    || defined($c->stash($our_stash_key)->{user}))
-              )
-            )
-        {
-            $user_loader_sub->($c);
-        }
+        my $stash = $c->stash($our_stash_key);
+        $user_loader_sub->($c)
+            unless $stash->{no_user} or defined $stash->{user};
 
-        my $user_def = defined($c->stash($our_stash_key))
-                          && defined($c->stash($our_stash_key)->{user});
-
-        return $user_def ? $c->stash($our_stash_key)->{user} : undef;
-
+        $stash = $c->stash($our_stash_key);
+        return $stash->{user};
     };
 
     $app->hook(before_dispatch => $user_loader_sub) if($autoload_user);
 
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = @_;
-        my $res = (!$required || $c->is_user_authenticated) ? 1 : 0;
-        $c->render(%$fail_render) if $fail_render && !$res;
+        my $res = (!$required or $c->is_user_authenticated);
+        $c->render(%$fail_render) if $fail_render and !$res;
         return $res;
     });
 
     $app->routes->add_condition(signed => sub {
         my ($r, $c, $captures, $required) = @_;
-        return (!$required || $c->signature_exists) ? 1 : 0;
+        return (!$required or $c->signature_exists);
     });
 
     # deprecation handling
@@ -109,15 +102,15 @@ sub register {
 
     $app->helper(signature_exists => sub {
         my $c = shift;
-        return $c->session($session_key) ? 1 : 0;
+        return !!$c->session($session_key);
     });
 
     $app->helper(is_user_authenticated => sub {
         my $c = shift;
-        return defined($current_user->($c)) ? 1 : 0;
+        return defined $current_user->($c);
     });
 
-    $app->helper("$current_user_fn" => $current_user);
+    $app->helper($current_user_fn => $current_user);
 
     $app->helper(logout => sub {
         my $c = shift;
@@ -136,11 +129,11 @@ sub register {
         my $uid = $extradata->{auto_validate} //
           $validate_user_cb->($c, $user, $pass, $extradata);
 
-        if(defined($uid)) {
+        if (defined $uid) {
             $c->session($session_key => $uid);
             # Clear stash to force reload of any already loaded user object
             delete $c->stash->{$our_stash_key};
-            return 1 if defined( $current_user->($c) );
+            return 1 if defined $current_user->($c);
         }
         return undef;
     });
