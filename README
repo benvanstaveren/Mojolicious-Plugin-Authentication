@@ -12,18 +12,29 @@ SYNOPSIS
         use Mojolicious::Plugin::Authentication
     
         $self->plugin('authentication' => {
-            'autoload_user' => 1,
-            'session_key' => 'wickedapp',
-            'load_user' => sub { ... },
-            'validate_user' => sub { ... },
-            'current_user_fn' => 'user', # compatibility with old code
+            autoload_user   => 1,
+            session_key     => 'wickedapp',
+            load_user       => sub { ... },
+            validate_user   => sub { ... },
+            current_user_fn => 'user', # compatibility with old code
         });
     
-        if ($self->authenticate('username', 'password', { optional => 'extra data stuff' })) {
+        my $authenticated = $self->authenticate(
+            'username', 'password',
+            { optional => 'extra data stuff' },
+        );
+    
+        if ($authenticated) {
             ...
         }
 
 METHODS
+
+    Like other Mojolicious plugins, loading this plugin will import some
+    function helpers into the namespace of your application. This will not
+    normally cause any trouble, but be aware that if you define methods
+    with the same names as those below, you'll likely run into unexpected
+    results.
 
  authenticate($username, $password, $extra_data_hashref)
 
@@ -33,9 +44,9 @@ METHODS
     when the user has been successfully authenticated, false otherwise. You
     can pass additional data along in the extra_data hashref, it will be
     passed to your validate_user subroutine as-is. If the extra data hash
-    contains a key 'auto_validate', the value of that key will be used as
-    the UID, and authenticate will not call your validate_user callback;
-    this can be used when working with oAuth tokens or other authentication
+    contains a key auto_validate, the value of that key will be used as the
+    UID, and authenticate will not call your validate_user callback; this
+    can be used when working with OAuth tokens or other authentication
     mechanisms that do not use a local username and password form.
 
  is_user_authenticated
@@ -48,6 +59,11 @@ METHODS
     Returns the user object as it was returned from the supplied load_user
     subroutine ref.
 
+    You can change the current user by passing it in, but be careful: This
+    bypasses the authentication. This is useful if you have multiple ways
+    to authenticate users and want to re-use authorization checks that use
+    current_user.
+
  reload_user
 
     Flushes the current user object and then returns user().
@@ -59,32 +75,39 @@ METHODS
 
     Warning: non-secure check! Use this method only for a "fast & dirty"
     lookup to see if the client has the proper cookies. May be helpful in
-    some cases (for example - in counting 'guest'/'logged users' or for
-    additional non-confidential information for 'logged users' but not for
-    'guest').
+    some cases (for example - in counting guest/logged users or for
+    additional non-confidential information for logged users but not for
+    guest).
 
  logout
 
     Removes the session data for authentication, and effectively logs a
-    user out.
+    user out. Returns a true value, to allow for chaining.
 
 CONFIGURATION
 
     The following options can be set for the plugin:
 
-    load_user (REQUIRED) A coderef for user loading (see "USER LOADING")
+    load_user (REQUIRED)
 
-    validate_user (REQUIRED) A coderef for user validation (see "USER
-    VALIDATION")
+      A coderef for user loading (see "USER LOADING")
 
-    session_key (optional) The name of the session key
+    validate_user (REQUIRED)
 
-    autoload_user (optional) Turn on/off automatic loading of user data -
-    user data can be loaded only if it be used. May reduce site latency in
-    some cases.
+      A coderef for user validation (see "USER VALIDATION")
 
-    current_user_fn (optional) Set the name for the current_user() helper
-    function
+    session_key (optional)
+
+      The name of the session key
+
+    autoload_user (optional)
+
+      Turn on/off automatic loading of user data - user data can be loaded
+      only if it be used. May reduce site latency in some cases.
+
+    current_user_fn (optional)
+
+      Set the name for the current_user() helper function
 
     In order to set the session expiry time, use the following in your
     startup routine:
@@ -138,7 +161,10 @@ ROUTING VIA CONDITION
 
         $r->route('/foo')->over(authenticated => 1)->to('mycontroller#foo');
     
-        my $authenticated_only = $r->route('/members')->over(authenticated => 1)->to('members#index');
+        my $authenticated_only = $r->route('/members')
+            ->over(authenticated => 1)
+            ->to('members#index');
+    
         $authenticated_only->route('online')->to('members#online');
 
     If someone is not authenticated, these routes will not be considered by
@@ -161,7 +187,9 @@ ROUTING VIA CALLBACK
         my $members_only = $r->route('/members')->to(cb => sub {
             my $self = shift;
     
-            $self->redirect_to('/login') and return 0 unless($self->is_user_authenticated);
+            $self->redirect_to('/login') and return 0
+                unless($self->is_user_authenticated);
+    
             return 1;
         });
     
@@ -172,7 +200,9 @@ ROUTING VIA CALLBACK
         my $members_only = $r->route('/unimportant')->to(cb => sub {
             my $self = shift;
     
-            $self->redirect_to('/login') and return 0 unless($self->signature_exists);
+            $self->redirect_to('/login') and return 0
+                unless($self->signature_exists);
+    
             return 1;
         });
     
@@ -184,32 +214,42 @@ ROUTING VIA BRIDGE
     use the following:
 
         my $auth_bridge = $r->under('/members')->to('auth#check');
-        $auth_bridge->route('/list')->to('members#list'); # only visible to logged in users
+        # only visible to logged in users
+        $auth_bridge->route('/list')->to('members#list');
 
     And in your Auth controller you would put:
 
         sub check {
             my $self = shift;
-            $self->redirect_to('/login') and return 0 unless($self->is_user_authenticated);
+    
+            $self->redirect_to('/login') and return 0
+                unless($self->is_user_authenticated);
+    
             return 1;
-        });
+        };
 
     Lazy and unsecured methods:
 
         sub check {
             my $self = shift;
-            $self->redirect_to('/login') and return 0 unless($self->signature_exists);
+    
+            $self->redirect_to('/login') and return 0
+                unless($self->signature_exists);
+    
             return 1;
-        });
+        };
 
 SEE ALSO
 
-    Mojolicious::Sessions, Mojocast 3: Authentication
-    <http://mojocasts.com/e3#>
+    Mojolicious::Sessions
+
+    Mojocast 3: Authentication <http://mojocasts.com/e3#>
 
 AUTHOR
 
     Ben van Staveren, <madcat at cpan.org>
+
+    José Joaquín Atria, <jjatria@cpan.org>
 
 BUGS / CONTRIBUTING
 
@@ -251,18 +291,26 @@ ACKNOWLEDGEMENTS
     Ivo Welch - For donating his first ever Mojolicious application that
     shows an example of how to use this module
 
-    Ed W - Adding the current_user() functionality, as well as some method
-    renaming to make things a bit more sane.
+    Ed Wildgoose (ewildgoose) - Adding the current_user() functionality, as
+    well as some method renaming to make things a bit more sane.
 
-    SailingYYC (Github) - For reporting an issue with routing conditions; I
-    really should not code while sleepy, brainfarts imminent!
+    Colin Cyr (SailingYYC) - For reporting an issue with routing
+    conditions; I really should not code while sleepy, brainfarts imminent!
 
-    carragom (Github) - For fixing the bug that'd consider an uid of 0 or
-    "0" to be a problem
+    Carlos Ramos (carragom) - For fixing the bug that'd consider an uid of
+    0 or "0" to be a problem
+
+    Doug Bell (preaction) - For improving the Travis CI integration and
+    enabling arguments for current_user
+
+    Roman F (moltar) - For fixing some pesky typos in sample code
+
+    Hernan Lopes (hernan604) - For updating some deprecated method names in
+    the documentation
 
 LICENSE AND COPYRIGHT
 
-    Copyright 2011-2015 Ben van Staveren.
+    Copyright 2011-2017 Ben van Staveren.
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of either: the GNU General Public License as published
