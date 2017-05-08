@@ -299,7 +299,7 @@ And in your Auth controller you would put:
         my $self = shift;
         $self->redirect_to('/login') and return 0 unless($self->is_user_authenticated);
         return 1;
-    });
+    };
 
 Lazy and unsecured methods:
 
@@ -307,7 +307,7 @@ Lazy and unsecured methods:
         my $self = shift;
         $self->redirect_to('/login') and return 0 unless($self->signature_exists);
         return 1;
-    });
+    };
 
 =head1 SEE ALSO
 
