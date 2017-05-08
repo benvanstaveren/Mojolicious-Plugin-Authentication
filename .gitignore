@@ -1,5 +1,4 @@
 syntax: glob
-Changes
 blib*
 Makefile
 Makefile.old
