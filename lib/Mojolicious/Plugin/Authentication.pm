@@ -25,7 +25,9 @@ sub register {
     my $load_user_cb      = $args->{load_user};
     my $validate_user_cb  = $args->{validate_user};
     my $current_user_fn   = $args->{current_user_fn} || 'current_user';
-    my $fail_render       = $args->{fail_render};
+
+    my $fail_render = ref $args->{fail_render} eq 'CODE'
+       ? $args->{fail_render} : sub { $args->{fail_render} };
 
     # Unconditionally load the user based on uid in session
     my $user_loader_sub = sub {
@@ -76,7 +78,11 @@ sub register {
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = @_;
         my $res = (!$required || $c->is_user_authenticated) ? 1 : 0;
-        $c->render(%$fail_render) if $fail_render && !$res;
+
+        unless ($res) {
+          my $fail = $fail_render->(@_);
+          $c->render(%{$fail}) if $fail;
+        }
         return $res;
     });
 
