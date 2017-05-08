@@ -400,7 +400,13 @@ Lazy and unsecured methods:
 
 =head1 AUTHOR
 
-Ben van Staveren, C<< <madcat at cpan.org> >>
+=over 4
+
+=item Ben van Staveren, C<< <madcat at cpan.org> >>
+
+=item José Joaquín Atria, C<< <jjatria@cpan.org> >>
+
+=back
 
 =head1 BUGS / CONTRIBUTING
 
@@ -451,7 +457,7 @@ Ivo Welch
     -   For donating his first ever Mojolicious application that shows an
         example of how to use this module
 
-Ed W
+Ed Wildgoose (ewildgoose)
     -   Adding the C<current_user()> functionality, as well as some method
         renaming to make things a bit more sane.
 
@@ -462,9 +468,19 @@ Colin Cyr (SailingYYC)
 Carlos Ramos (carragom)
     -   For fixing the bug that'd consider an uid of 0 or "0" to be a problem
 
+Doug Bell (preaction)
+    -   For improving the Travis CI integration and enabling arguments for
+        current_user
+
+Roman F (moltar)
+    -   For fixing some pesky typos in sample code
+
+Hernan Lopes (hernan604)
+    -   For updating some deprecated method names in the documentation
+
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011-2015 Ben van Staveren.
+Copyright 2011-2017 Ben van Staveren.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
