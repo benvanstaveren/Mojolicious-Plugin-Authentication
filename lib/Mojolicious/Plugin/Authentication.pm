@@ -180,6 +180,11 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head1 METHODS
 
+Like other Mojolicious plugins, loading this plugin will import some function
+helpers into the namespace of your application. This will not normally cause
+any trouble, but be aware that if you define methods with the same names as
+those below, you'll likely run into unexpected results.
+
 =head2 authenticate($username, $password, $extra_data_hashref)
 
 Authenticate will use the supplied C<load_user> and C<validate_user>
