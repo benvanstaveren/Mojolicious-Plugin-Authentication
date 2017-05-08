@@ -124,6 +124,7 @@ sub register {
         my $c = shift;
         delete $c->stash->{$our_stash_key};
         delete $c->session->{$session_key};
+        return 1;
     });
 
     $app->helper(authenticate => sub {
@@ -223,6 +224,7 @@ non-confidential information for C<logged users> but not for C<guest>).
 =head2 logout
 
 Removes the session data for authentication, and effectively logs a user out.
+Returns a true value, to allow for chaining.
 
 =head1 CONFIGURATION
 
