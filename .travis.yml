@@ -5,6 +5,5 @@ perl:
 sudo: false
 before_install:
   - eval $(curl https://travis-perl.github.io/init) --auto
-  - cpan-install Test::CheckManifest
 notifications:
   email: false
