@@ -137,7 +137,7 @@ sub register {
 
         $extradata ||= {};
         my $uid = $extradata->{auto_validate} //
-          $validate_user_cb->($c, $user, $pass, $extradata);
+            $validate_user_cb->($c, $user, $pass, $extradata);
 
         if (defined $uid) {
             $c->session($session_key => $uid);
