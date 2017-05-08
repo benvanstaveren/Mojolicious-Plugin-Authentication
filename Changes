@@ -2,6 +2,23 @@ Revision history for Mojolicious-Plugin-Authentication
 
 {{$NEXT}}
 
+    * Fixed:
+      * Retroactively updated the change log...
+
+1.30      2017-05-09 00:36:25+01:00 Europe/London
+
+    * New:
+      * The current user can be manually set by passing an argument to
+        current_user (preaction)
+      * Added a note in the documentation on possible namespace conflicts
+    * Fixed:
+      * Fixed an error that made the auto_validate key not behave as
+        documented (jjatria)
+      * Fixed the tests for Travis CI (preaction)
+      * Fixed some typos in sample code (moltar)
+    * Changes:
+      * Simplified some of the conditional code in the distribution
+
 1.29      2015-10-28 09:35:22+01:00 Europe/Berlin
     Implements new parameter to control response from routing via condition
 
