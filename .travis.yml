@@ -1,9 +1,10 @@
 language: perl
-sudo: false
 perl:
-- "5.20"
-- "5.16"
-install:
-- "cpanm -n Test::More Test::CheckManifest Test::Mojo Mojolicious"
+  - "5.16"
+  - "5.20"
+sudo: false
+before_install:
+  - eval $(curl https://travis-perl.github.io/init) --auto
+  - cpan-install Test::CheckManifest
 notifications:
   email: false
