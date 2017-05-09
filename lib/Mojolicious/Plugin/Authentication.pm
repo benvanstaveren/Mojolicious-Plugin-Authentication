@@ -153,6 +153,8 @@ sub register {
 
 __END__
 
+=encoding UTF-8
+
 =head1 NAME
 
 Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easier
