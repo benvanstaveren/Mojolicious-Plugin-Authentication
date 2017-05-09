@@ -2,6 +2,17 @@ Revision history for Mojolicious-Plugin-Authentication
 
 {{$NEXT}}
 
+    * New:
+      * The fail_render option now also accepts a code reference
+      * Add contributor metadata for proper attribution. Names are matched
+        with the ASCII names and emails on CPAN when available. If you spot a
+        mistake or prefer something different, let me know!
+      * POD is now tested as part of release cycle
+    * Fixed:
+      * Fixed an encoding error in POD
+
+1.31      2017-05-09 00:46:25+01:00 Europe/London
+
     * Fixed:
       * Retroactively updated the change log...
 

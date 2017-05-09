@@ -5,7 +5,7 @@ NAME
 
 VERSION
 
-    version 1.31
+    version 1.32
 
 SYNOPSIS
 
@@ -108,6 +108,27 @@ CONFIGURATION
     current_user_fn (optional)
 
       Set the name for the current_user() helper function
+
+    fail_render (optional)
+
+      Specify what is to be rendered when the authenticated condition is
+      not met.
+
+      Set to a coderef which will be called with the following signature:
+
+          sub {
+              my ($routes, $controller, $captures, $required) = @_;
+              ...
+              return $hashref;
+          }
+
+      The return value of the subroutine will be ignored if it evaluates to
+      false. If it returns a hash reference, it will be dereferenced and
+      passed as-is to the controller's render function. If you return
+      anything else, you are going to have a bad time.
+
+      If set directly to a hash reference, that will be passed to render
+      instead.
 
     In order to set the session expiry time, use the following in your
     startup routine:
