@@ -266,6 +266,25 @@ it be used. May reduce site latency in some cases.
 
 Set the name for the C<current_user()> helper function
 
+=item fail_render (optional)
+
+Specify what is to be rendered when the authenticated condition is not met.
+
+Set to a coderef which will be called with the following signature:
+
+    sub {
+        my ($routes, $controller, $captures, $required) = @_;
+        ...
+        return $hashref;
+    }
+
+The return value of the subroutine will be ignored if it evaluates to false.
+If it returns a hash reference, it will be dereferenced and passed as-is
+to the controller's C<render> function. If you return anything else, you are
+going to have a bad time.
+
+If set directly to a hash reference, that will be passed to C<render> instead.
+
 =back
 
 In order to set the session expiry time, use the following in your startup
