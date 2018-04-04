@@ -316,7 +316,7 @@ coderef you pass to the C<validate_user> configuration key has the following
 signature:
 
     sub {
-        my ($app, $username, $password, $extradata) = @_;
+        my ($c, $username, $password, $extradata) = @_;
         ...
         return $uid;
     }
