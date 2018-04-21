@@ -5,11 +5,11 @@ NAME
 
 VERSION
 
-    version 1.32
+    version 1.33
 
 SYNOPSIS
 
-        use Mojolicious::Plugin::Authentication
+        use Mojolicious::Plugin::Authentication;
     
         $self->plugin('authentication' => {
             autoload_user   => 1,
@@ -159,7 +159,7 @@ USER VALIDATION
     following signature:
 
         sub {
-            my ($app, $username, $password, $extradata) = @_;
+            my ($c, $username, $password, $extradata) = @_;
             ...
             return $uid;
         }
