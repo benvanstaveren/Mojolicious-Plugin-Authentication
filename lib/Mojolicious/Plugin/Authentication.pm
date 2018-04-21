@@ -167,7 +167,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
 =head1 SYNOPSIS
 
-    use Mojolicious::Plugin::Authentication
+    use Mojolicious::Plugin::Authentication;
 
     $self->plugin('authentication' => {
         autoload_user   => 1,
