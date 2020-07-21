@@ -233,7 +233,7 @@ L<below|/CONFIGURATION>).
 
 =head2 reload_user
 
-Flushes the current user object and then returns user().
+Flushes the current user object and then returns current_user().
 
 =head2 signature_exists
 
