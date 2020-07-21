@@ -169,7 +169,7 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
     use Mojolicious::Plugin::Authentication;
 
-    $self->plugin('authentication' => {
+    $self->plugin('Authentication' => {
         autoload_user   => 1,
         session_key     => 'wickedapp',
         load_user       => sub { ... },

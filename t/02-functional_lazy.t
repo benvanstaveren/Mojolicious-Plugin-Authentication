@@ -12,7 +12,7 @@ plan tests => 40;
 use Mojolicious::Lite;
 use Test::Mojo;
 
-plugin 'authentication', {
+plugin 'Authentication', {
     autoload_user => 0,
     load_user => sub {
         my $self = shift;

@@ -12,7 +12,7 @@ plan tests => 41;
 use Mojolicious::Lite;
 use Test::Mojo;
 
-plugin 'authentication', {
+plugin 'Authentication', {
     autoload_user => 1,
     load_user => sub {
         my $self = shift;
@@ -96,7 +96,7 @@ $t->post_ok('/login2' => form => { u => 'foo', p => 'bar' })->status_is(200)->co
 $t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
 $t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated condition');
 
-plugin 'authentication', {
+plugin 'Authentication', {
     autoload_user => 1,
     fail_render => { status => 401, json => { message => 'Unauthorized' } },
     load_user => sub {
