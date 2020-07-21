@@ -33,40 +33,17 @@ sub register {
     my $fail_render = ref $args->{fail_render} eq 'CODE'
        ? $args->{fail_render} : sub { $args->{fail_render} };
 
-    # Unconditionally load the user based on uid in session
-    my $user_loader_sub = sub {
-        my $c = shift;
-        my $uid = $c->session($session_key);
+    my $user_loader_sub = user_loader_closure(
+        $our_stash_key, $session_key, $load_user_cb,
+    );
 
-        return if !defined $uid;
-        my $user = $load_user_cb->($c, $uid);
-        if ($user) {
-            $c->stash($our_stash_key => { user => $user });
-        }
-        else {
-            # cache result that user does not exist
-            $c->stash($our_stash_key => { no_user => 1 });
-        }
-    };
+    my $current_user = user_stash_extractor_closure(
+        $our_stash_key, $user_loader_sub,
+    );
 
-    # Fetch the current user object from the stash - loading it if
-    # not already loaded
-    my $user_stash_extractor_sub = sub {
-        my ($c, $user) = @_;
-
-        # Allow setting the current_user
-        if ( defined $user ) {
-            $c->stash($our_stash_key => { user => $user });
-            return;
-        }
-
-        my $stash = $c->stash($our_stash_key);
-        $user_loader_sub->($c)
-            unless $stash->{no_user} or defined $stash->{user};
-
-        $stash = $c->stash($our_stash_key);
-        return $stash->{user};
-    };
+    $app->helper(authenticate => authenticate_closure(
+        $our_stash_key, $session_key, $validate_user_cb, $current_user,
+    ));
 
     $app->hook(before_dispatch => $user_loader_sub) if($autoload_user);
 
@@ -101,10 +78,6 @@ sub register {
         return shift->$current_user_fn(@_);
     });
 
-    my $current_user = sub {
-        return $user_stash_extractor_sub->(@_);
-    };
-
     $app->helper(reload_user => sub {
         my $c = shift;
         # Clear stash to force a reload of the user object
@@ -130,27 +103,63 @@ sub register {
         delete $c->session->{$session_key};
         return 1;
     });
+}
 
-    $app->helper(authenticate => sub {
+# Unconditionally load the user based on uid in session
+sub user_loader_closure {
+    my ($our_stash_key, $session_key, $load_user_cb) = @_;
+    sub {
+        my $c = shift;
+        my $uid = $c->session($session_key);
+        return if !defined $uid;
+        my $user = $load_user_cb->($c, $uid);
+        if ($user) {
+            $c->stash($our_stash_key => { user => $user });
+        }
+        else {
+            # cache result that user does not exist
+            $c->stash($our_stash_key => { no_user => 1 });
+        }
+    };
+}
+
+# Fetch the current user object from the stash - loading it if
+# not already loaded
+sub user_stash_extractor_closure {
+    my ($our_stash_key, $user_loader_sub) = @_;
+    sub {
+        my ($c, $user) = @_;
+        # Allow setting the current_user
+        if ( defined $user ) {
+            $c->stash($our_stash_key => { user => $user });
+            return;
+        }
+        my $stash = $c->stash($our_stash_key);
+        $user_loader_sub->($c)
+            unless $stash->{no_user} or defined $stash->{user};
+        $stash = $c->stash($our_stash_key);
+        return $stash->{user};
+    };
+}
+
+sub authenticate_closure {
+    my ($our_stash_key, $session_key, $validate_user_cb, $current_user) = @_;
+    sub {
         my ($c, $user, $pass, $extradata) = @_;
-
         # if extradata contains "auto_validate", assume the passed username
         # is in fact valid, and auto_validate contains the uid; used for
         # OAuth and other stuff that does not work with usernames and
         # passwords; use this with extreme care if you must
-
         $extradata ||= {};
         my $uid = $extradata->{auto_validate} //
             $validate_user_cb->($c, $user, $pass, $extradata);
-
-        if (defined $uid) {
-            $c->session($session_key => $uid);
-            # Clear stash to force reload of any already loaded user object
-            delete $c->stash->{$our_stash_key};
-            return 1 if defined $current_user->($c);
-        }
+        return undef if !defined $uid;
+        $c->session($session_key => $uid);
+        # Clear stash to force reload of any already loaded user object
+        delete $c->stash->{$our_stash_key};
+        return 1 if defined $current_user->($c);
         return undef;
-    });
+    };
 }
 
 1;
