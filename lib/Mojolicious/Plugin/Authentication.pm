@@ -227,6 +227,10 @@ bypasses the authentication. This is useful if you have multiple ways to
 authenticate users and want to re-use authorization checks that use
 C<current_user>.
 
+Note that the name of this helper can be changed with
+the C<current_user_fn> field during initialisation (see
+L<below|/CONFIGURATION>).
+
 =head2 reload_user
 
 Flushes the current user object and then returns user().
