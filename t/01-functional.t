@@ -6,11 +6,10 @@ use warnings;
 BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
 use Test::More;
-plan tests => 41;
 
 use Mojo::File qw(path);
 use lib path(qw(t lib))."";
-use TestUtils qw(load_user_t validate_user_t);
+use TestUtils qw(load_user_t validate_user_t load_user_t_p validate_user_t_p);
 
 # testing code starts here
 use Mojolicious::Lite;
@@ -98,3 +97,19 @@ $t = Test::Mojo->new;
 $t->get_ok('/condition/authonly')
     ->status_is(401)
     ->json_is('/message' => 'Unauthorized');
+
+plugin 'Authentication', {
+    autoload_user => 1,
+    fail_render => { status => 401, json => { message => 'Unauthorized' } },
+    load_user_p => \&load_user_t_p,
+    validate_user_p => \&validate_user_t_p,
+};
+get '/condition/authonly_p' => (authenticated => 1) => sub {
+    my $self = shift;
+    $self->render(text => 'authenticated condition');
+};
+$t->get_ok('/condition/authonly_p')
+    ->status_is(401)
+    ->json_is('/message' => 'Unauthorized');
+
+done_testing;

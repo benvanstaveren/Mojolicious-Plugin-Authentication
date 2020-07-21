@@ -2,6 +2,9 @@ Revision history for Mojolicious-Plugin-Authentication
 
 {{$NEXT}}
 
+    * New:
+      * Support async callbacks with "_p" appended
+
     * Fixed:
       * Fixed some minor typos in the documentation (kberov)
       * Fixed a broken link in the project's metadata (fschlich)

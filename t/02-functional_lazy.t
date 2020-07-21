@@ -7,10 +7,9 @@ BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
 use Mojo::File qw(path);
 use lib path(qw(t lib))."";
-use TestUtils qw(load_user_t validate_user_t);
+use TestUtils qw(load_user_t validate_user_t load_user_t_p validate_user_t_p);
 
 use Test::More;
-plan tests => 40;
 
 # testing code starts here
 use Mojolicious::Lite;
@@ -110,3 +109,31 @@ $t->get_ok('/authonly/lazy')->status_is(200)
   ->content_is('sign not authenticated');
 
 $t->get_ok('/auto_validate')->status_is(200);
+
+plugin 'Authentication', {
+    autoload_user => 0,
+    load_user_p => \&load_user_t_p,
+    validate_user_p => \&validate_user_t_p,
+};
+post '/login_p' => sub {
+    my $self = shift;
+    my $u    = $self->req->param('u');
+    my $p    = $self->req->param('p');
+    $self->authenticate_p( $u, $p )->then(sub {
+        $self->render( text => $_[0] ? 'ok' : 'failed' );
+    });
+};
+get '/authonly_p' => sub {
+    my $self = shift;
+    $self->is_user_authenticated_p->then(sub {
+        $self->render( text => $_[0] ? 'authenticated' : 'not authenticated' );
+    });
+};
+$t = Test::Mojo->new;
+$t->post_ok( '/login_p' => form => { u => 'fnark', p => 'fnork' } )->status_is(200)
+  ->content_is('failed');
+$t->get_ok('/authonly_p')->status_is(200)->content_is('not authenticated');
+$t->post_ok( '/login_p' => form => { u => 'foo', p => 'bar' } )->status_is(200)
+  ->content_is('ok');
+
+done_testing;
