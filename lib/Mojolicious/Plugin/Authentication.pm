@@ -38,15 +38,14 @@ sub register {
         my $c = shift;
         my $uid = $c->session($session_key);
 
-        if (defined($uid)) {
-            my $user = $load_user_cb->($c, $uid);
-            if ($user) {
-                $c->stash($our_stash_key => { user => $user });
-            }
-            else {
-                # cache result that user does not exist
-                $c->stash($our_stash_key => { no_user => 1 });
-            }
+        return if !defined $uid;
+        my $user = $load_user_cb->($c, $uid);
+        if ($user) {
+            $c->stash($our_stash_key => { user => $user });
+        }
+        else {
+            # cache result that user does not exist
+            $c->stash($our_stash_key => { no_user => 1 });
         }
     };
 
