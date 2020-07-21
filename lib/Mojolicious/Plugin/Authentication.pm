@@ -10,11 +10,10 @@ sub register {
 
     $args ||= {};
 
-    die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n"
-        unless $args->{load_user} and ref $args->{load_user} eq 'CODE';
-
-    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
-        unless $args->{validate_user} and ref $args->{validate_user} eq 'CODE';
+    for my $cb_name (qw(load_user validate_user)) {
+        die __PACKAGE__, ": missing '$cb_name' subroutine ref in parameters\n"
+            unless $args->{$cb_name} and ref $args->{$cb_name} eq 'CODE';
+    }
 
     if (defined $args->{lazy}) {
         warn __PACKAGE__,
