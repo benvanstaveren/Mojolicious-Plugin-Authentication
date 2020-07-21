@@ -5,6 +5,10 @@ use warnings;
 # Disable IPv6, epoll and kqueue
 BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
+use Mojo::File qw(path);
+use lib path(qw(t lib))."";
+use TestUtils qw(load_user_t validate_user_t);
+
 use Test::More;
 plan tests => 40;
 
@@ -14,26 +18,8 @@ use Test::Mojo;
 
 plugin 'Authentication', {
     autoload_user => 0,
-    load_user => sub {
-        my $self = shift;
-        my $uid  = shift;
-
-        return {
-            'username' => 'foo',
-            'password' => 'bar',
-            'name'     => 'Foo'
-          }
-          if ( $uid eq 'userid' );
-        return undef;
-    },
-    validate_user => sub {
-        my ($self, $username, $password, $extradata) = @_;
-
-        die unless defined $password;
-
-        return 'userid' if ( $username eq 'foo' && $password eq 'bar' );
-        return undef;
-    },
+    load_user => \&load_user_t,
+    validate_user => \&validate_user_t,
 };
 
 get '/' => sub {

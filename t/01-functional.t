@@ -8,33 +8,18 @@ BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 use Test::More;
 plan tests => 41;
 
+use Mojo::File qw(path);
+use lib path(qw(t lib))."";
+use TestUtils qw(load_user_t validate_user_t);
+
 # testing code starts here
 use Mojolicious::Lite;
 use Test::Mojo;
 
 plugin 'Authentication', {
     autoload_user => 1,
-    load_user => sub {
-        my $self = shift;
-        my $uid  = shift;
-
-        return {
-            'username' => 'foo',
-            'password' => 'bar',
-            'name'     => 'Foo'
-            } if($uid eq 'userid' || $uid eq 'useridwithextradata');
-        return undef;
-    },
-    validate_user => sub {
-        my $self = shift;
-        my $username = shift || '';
-        my $password = shift || '';
-        my $extradata = shift || {};
-
-        return 'useridwithextradata' if($username eq 'foo' && $password eq 'bar' && ( $extradata->{'ohnoes'} || '' ) eq 'itsameme');
-        return 'userid' if($username eq 'foo' && $password eq 'bar');
-        return undef;
-    },
+    load_user => \&load_user_t,
+    validate_user => \&validate_user_t,,
 };
 
 get '/' => sub {
@@ -99,27 +84,8 @@ $t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated con
 plugin 'Authentication', {
     autoload_user => 1,
     fail_render => { status => 401, json => { message => 'Unauthorized' } },
-    load_user => sub {
-        my $self = shift;
-        my $uid  = shift;
-
-        return {
-            'username' => 'foo',
-            'password' => 'bar',
-            'name'     => 'Foo'
-            } if($uid eq 'userid' || $uid eq 'useridwithextradata');
-        return undef;
-    },
-    validate_user => sub {
-        my $self = shift;
-        my $username = shift || '';
-        my $password = shift || '';
-        my $extradata = shift || {};
-
-        return 'useridwithextradata' if($username eq 'foo' && $password eq 'bar' && ( $extradata->{'ohnoes'} || '' ) eq 'itsameme');
-        return 'userid' if($username eq 'foo' && $password eq 'bar');
-        return undef;
-    },
+    load_user => \&load_user_t,
+    validate_user => \&validate_user_t,
 };
 
 get '/condition/authonly' => (authenticated => 1) => sub {
