@@ -5,25 +5,41 @@ NAME
 
 VERSION
 
-    version 1.33
+    version 1.34
 
 SYNOPSIS
 
         use Mojolicious::Plugin::Authentication;
     
-        $self->plugin('authentication' => {
+        $self->plugin('Authentication' => {
+            autoload_user   => 1,
+            session_key     => 'wickedapp',
+            load_user_p     => sub { ... },
+            validate_user_p => sub { ... },
+        });
+        # ...
+        $self->authenticate_p(
+            'username', 'password',
+            { optional => 'extra data stuff' },
+        )->then(sub {
+            my ($authenticated) = @_;
+            if ($authenticated) {
+                # ...
+            }
+        });
+    
+        # or, synchronous style
+        $self->plugin('Authentication' => {
             autoload_user   => 1,
             session_key     => 'wickedapp',
             load_user       => sub { ... },
             validate_user   => sub { ... },
             current_user_fn => 'user', # compatibility with old code
         });
-    
         my $authenticated = $self->authenticate(
             'username', 'password',
             { optional => 'extra data stuff' },
         );
-    
         if ($authenticated) {
             ...
         }
@@ -49,10 +65,20 @@ METHODS
     can be used when working with OAuth tokens or other authentication
     mechanisms that do not use a local username and password form.
 
+ authenticate_p($username, $password, $extra_data_hashref)
+
+    As above, but instead of returning a value, returns a promise of same.
+    Available even if only synchronous callbacks are provided as these will
+    be "promisified".
+
  is_user_authenticated
 
     Returns true if current_user() returns some valid object, false
     otherwise.
+
+ is_user_authenticated_p
+
+    As above, but instead of returning a value, returns a promise of same.
 
  current_user
 
@@ -64,9 +90,20 @@ METHODS
     to authenticate users and want to re-use authorization checks that use
     current_user.
 
+    Note that the name of this helper can be changed with the
+    current_user_fn field during initialisation (see below).
+
+ current_user_p
+
+    As above, but instead of returning a value, returns a promise of same.
+
  reload_user
 
-    Flushes the current user object and then returns user().
+    Flushes the current user object and then returns current_user().
+
+ reload_user_p
+
+    As above, but instead of returning a value, returns a promise of same.
 
  signature_exists
 
@@ -86,7 +123,9 @@ METHODS
 
 CONFIGURATION
 
-    The following options can be set for the plugin:
+    The following options can be set for the plugin, (but the "REQUIRED"
+    ones can be replaced with a promise-returning equivalent with _p
+    appended to the key):
 
     load_user (REQUIRED)
 
@@ -107,7 +146,8 @@ CONFIGURATION
 
     current_user_fn (optional)
 
-      Set the name for the current_user() helper function
+      Set the name for the current_user() helper function. _p will be
+      appended for the asynchronous version.
 
     fail_render (optional)
 
