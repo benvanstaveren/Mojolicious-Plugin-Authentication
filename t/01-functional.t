@@ -6,35 +6,19 @@ use warnings;
 BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
 use Test::More;
-plan tests => 41;
+
+use Mojo::File qw(path);
+use lib path(qw(t lib))."";
+use TestUtils qw(load_user_t validate_user_t load_user_t_p validate_user_t_p);
 
 # testing code starts here
 use Mojolicious::Lite;
 use Test::Mojo;
 
-plugin 'authentication', {
+plugin 'Authentication', {
     autoload_user => 1,
-    load_user => sub {
-        my $self = shift;
-        my $uid  = shift;
-
-        return {
-            'username' => 'foo',
-            'password' => 'bar',
-            'name'     => 'Foo'
-            } if($uid eq 'userid' || $uid eq 'useridwithextradata');
-        return undef;
-    },
-    validate_user => sub {
-        my $self = shift;
-        my $username = shift || '';
-        my $password = shift || '';
-        my $extradata = shift || {};
-
-        return 'useridwithextradata' if($username eq 'foo' && $password eq 'bar' && ( $extradata->{'ohnoes'} || '' ) eq 'itsameme');
-        return 'userid' if($username eq 'foo' && $password eq 'bar');
-        return undef;
-    },
+    load_user => \&load_user_t,
+    validate_user => \&validate_user_t,,
 };
 
 get '/' => sub {
@@ -96,30 +80,11 @@ $t->post_ok('/login2' => form => { u => 'foo', p => 'bar' })->status_is(200)->co
 $t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
 $t->get_ok('/condition/authonly')->status_is(200)->content_is('authenticated condition');
 
-plugin 'authentication', {
+plugin 'Authentication', {
     autoload_user => 1,
     fail_render => { status => 401, json => { message => 'Unauthorized' } },
-    load_user => sub {
-        my $self = shift;
-        my $uid  = shift;
-
-        return {
-            'username' => 'foo',
-            'password' => 'bar',
-            'name'     => 'Foo'
-            } if($uid eq 'userid' || $uid eq 'useridwithextradata');
-        return undef;
-    },
-    validate_user => sub {
-        my $self = shift;
-        my $username = shift || '';
-        my $password = shift || '';
-        my $extradata = shift || {};
-
-        return 'useridwithextradata' if($username eq 'foo' && $password eq 'bar' && ( $extradata->{'ohnoes'} || '' ) eq 'itsameme');
-        return 'userid' if($username eq 'foo' && $password eq 'bar');
-        return undef;
-    },
+    load_user => \&load_user_t,
+    validate_user => \&validate_user_t,
 };
 
 get '/condition/authonly' => (authenticated => 1) => sub {
@@ -132,3 +97,19 @@ $t = Test::Mojo->new;
 $t->get_ok('/condition/authonly')
     ->status_is(401)
     ->json_is('/message' => 'Unauthorized');
+
+plugin 'Authentication', {
+    autoload_user => 1,
+    fail_render => { status => 401, json => { message => 'Unauthorized' } },
+    load_user_p => \&load_user_t_p,
+    validate_user_p => \&validate_user_t_p,
+};
+get '/condition/authonly_p' => (authenticated => 1) => sub {
+    my $self = shift;
+    $self->render(text => 'authenticated condition');
+};
+$t->get_ok('/condition/authonly_p')
+    ->status_is(401)
+    ->json_is('/message' => 'Unauthorized');
+
+done_testing;

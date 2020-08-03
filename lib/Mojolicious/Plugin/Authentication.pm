@@ -4,17 +4,22 @@ use strict;
 package Mojolicious::Plugin::Authentication;
 
 use Mojo::Base 'Mojolicious::Plugin';
+use Mojo::Promise;
 
 sub register {
     my ($self, $app, $args) = @_;
 
-    $args ||= {};
+    $args = { %{ $args || {} } }; # copy as mutating
 
-    die __PACKAGE__, ": missing 'load_user' subroutine ref in parameters\n"
-        unless $args->{load_user} and ref $args->{load_user} eq 'CODE';
-
-    die __PACKAGE__, ": missing 'validate_user' subroutine ref in parameters\n"
-        unless $args->{validate_user} and ref $args->{validate_user} eq 'CODE';
+    for my $cb_name (qw(load_user validate_user)) {
+        my $p_name = $cb_name."_p";
+        die __PACKAGE__, ": missing '$cb_name' subroutine ref in parameters\n"
+            unless grep ref eq 'CODE', @$args{$cb_name, $p_name};
+        $args->{$p_name} = sub {
+            my @r = eval { $args->{$cb_name}->(@_) };
+            $@ ? Mojo::Promise->reject($@) : Mojo::Promise->resolve(@r);
+        } if !$args->{$p_name};
+    }
 
     if (defined $args->{lazy}) {
         warn __PACKAGE__,
@@ -30,47 +35,34 @@ sub register {
     my $current_user_fn   = $args->{current_user_fn} || 'current_user';
     my $load_user_cb      = $args->{load_user};
     my $validate_user_cb  = $args->{validate_user};
+    my $load_user_cb_p    = $args->{load_user_p};
+    my $validate_user_cb_p= $args->{validate_user_p};
 
     my $fail_render = ref $args->{fail_render} eq 'CODE'
        ? $args->{fail_render} : sub { $args->{fail_render} };
 
-    # Unconditionally load the user based on uid in session
-    my $user_loader_sub = sub {
-        my $c = shift;
-        my $uid = $c->session($session_key);
+    my $user_loader_sub = user_loader_closure(
+        $our_stash_key, $session_key, $load_user_cb,
+    );
+    my $user_loader_sub_p = user_loader_closure_p(
+        $our_stash_key, $session_key, $load_user_cb_p,
+    );
 
-        if (defined($uid)) {
-            my $user = $load_user_cb->($c, $uid);
-            if ($user) {
-                $c->stash($our_stash_key => { user => $user });
-            }
-            else {
-                # cache result that user does not exist
-                $c->stash($our_stash_key => { no_user => 1 });
-            }
-        }
-    };
+    my $current_user = user_stash_extractor_closure(
+        $our_stash_key, $user_loader_sub,
+    );
+    my $current_user_p = user_stash_extractor_closure_p(
+        $our_stash_key, $user_loader_sub_p,
+    );
 
-    # Fetch the current user object from the stash - loading it if
-    # not already loaded
-    my $user_stash_extractor_sub = sub {
-        my ($c, $user) = @_;
+    $app->helper(authenticate => authenticate_closure(
+        $our_stash_key, $session_key, $validate_user_cb, $current_user,
+    ));
+    $app->helper(authenticate_p => authenticate_closure_p(
+        $our_stash_key, $session_key, $validate_user_cb_p, $current_user_p,
+    ));
 
-        # Allow setting the current_user
-        if ( defined $user ) {
-            $c->stash($our_stash_key => { user => $user });
-            return;
-        }
-
-        my $stash = $c->stash($our_stash_key);
-        $user_loader_sub->($c)
-            unless $stash->{no_user} or defined $stash->{user};
-
-        $stash = $c->stash($our_stash_key);
-        return $stash->{user};
-    };
-
-    $app->hook(before_dispatch => $user_loader_sub) if($autoload_user);
+    $app->hook(before_dispatch => $user_loader_sub_p) if $autoload_user;
 
     $app->routes->add_condition(authenticated => sub {
         my ($r, $c, $captures, $required) = @_;
@@ -103,15 +95,17 @@ sub register {
         return shift->$current_user_fn(@_);
     });
 
-    my $current_user = sub {
-        return $user_stash_extractor_sub->(@_);
-    };
-
     $app->helper(reload_user => sub {
         my $c = shift;
         # Clear stash to force a reload of the user object
         delete $c->stash->{$our_stash_key};
         return $current_user->($c);
+    });
+    $app->helper(reload_user_p => sub {
+        my $c = shift;
+        # Clear stash to force a reload of the user object
+        delete $c->stash->{$our_stash_key};
+        return $current_user_p->($c);
     });
 
     $app->helper(signature_exists => sub {
@@ -123,8 +117,15 @@ sub register {
         my $c = shift;
         return defined $current_user->($c);
     });
+    $app->helper(is_user_authenticated_p => sub {
+        my $c = shift;
+        $current_user_p->($c)->then(sub {
+            return defined $_[0];
+        });
+    });
 
     $app->helper($current_user_fn => $current_user);
+    $app->helper($current_user_fn."_p" => $current_user_p);
 
     $app->helper(logout => sub {
         my $c = shift;
@@ -132,27 +133,121 @@ sub register {
         delete $c->session->{$session_key};
         return 1;
     });
+}
 
-    $app->helper(authenticate => sub {
+# Unconditionally load the user based on uid in session
+sub user_loader_closure {
+    my ($our_stash_key, $session_key, $load_user_cb) = @_;
+    sub {
+        my $c = shift;
+        my $uid = $c->session($session_key);
+        return if !defined $uid;
+        my $user = $load_user_cb->($c, $uid);
+        if ($user) {
+            $c->stash($our_stash_key => { user => $user });
+        }
+        else {
+            # cache result that user does not exist
+            $c->stash($our_stash_key => { no_user => 1 });
+        }
+    };
+}
+sub user_loader_closure_p {
+    my ($our_stash_key, $session_key, $load_user_cb_p) = @_;
+    sub {
+        my $c = shift;
+        my $uid = $c->session($session_key);
+        return Mojo::Promise->resolve if !defined $uid;
+        $load_user_cb_p->($c, $uid)->then(sub {
+            my $user = $_[0];
+            if ($user) {
+                $c->stash($our_stash_key => { user => $user });
+            }
+            else {
+                # cache result that user does not exist
+                $c->stash($our_stash_key => { no_user => 1 });
+            }
+        });
+    };
+}
+
+# Fetch the current user object from the stash - loading it if
+# not already loaded
+sub user_stash_extractor_closure {
+    my ($our_stash_key, $user_loader_sub) = @_;
+    sub {
+        my ($c, $user) = @_;
+        # Allow setting the current_user
+        if ( defined $user ) {
+            $c->stash($our_stash_key => { user => $user });
+            return;
+        }
+        my $stash = $c->stash($our_stash_key);
+        $user_loader_sub->($c)
+            unless $stash->{no_user} or defined $stash->{user};
+        $stash = $c->stash($our_stash_key);
+        return $stash->{user};
+    };
+}
+sub user_stash_extractor_closure_p {
+    my ($our_stash_key, $user_loader_sub_p) = @_;
+    sub {
+        my ($c, $user) = @_;
+        # Allow setting the current_user
+        if ( defined $user ) {
+            return Mojo::Promise->resolve->then(sub {
+                $c->stash($our_stash_key => { user => $user });
+            });
+        }
+        my $stash = $c->stash($our_stash_key);
+        my $promise = ($stash->{no_user} or defined $stash->{user})
+            ? Mojo::Promise->resolve
+            : $user_loader_sub_p->($c);
+        $promise->then(sub {
+            $stash = $c->stash($our_stash_key);
+            return $stash->{user};
+        });
+    };
+}
+
+sub authenticate_closure {
+    my ($our_stash_key, $session_key, $validate_user_cb, $current_user) = @_;
+    sub {
         my ($c, $user, $pass, $extradata) = @_;
-
         # if extradata contains "auto_validate", assume the passed username
         # is in fact valid, and auto_validate contains the uid; used for
         # OAuth and other stuff that does not work with usernames and
         # passwords; use this with extreme care if you must
-
         $extradata ||= {};
         my $uid = $extradata->{auto_validate} //
             $validate_user_cb->($c, $user, $pass, $extradata);
-
-        if (defined $uid) {
+        return undef if !defined $uid;
+        $c->session($session_key => $uid);
+        # Clear stash to force reload of any already loaded user object
+        delete $c->stash->{$our_stash_key};
+        return 1 if defined $current_user->($c);
+        return undef;
+    };
+}
+sub authenticate_closure_p {
+    my ($our_stash_key, $session_key, $validate_user_cb_p, $current_user_p) = @_;
+    sub {
+        my ($c, $user, $pass, $extradata) = @_;
+        $extradata ||= {};
+        my $promise = defined($extradata->{auto_validate})
+            ? Mojo::Promise->resolve($extradata->{auto_validate})
+            : $validate_user_cb_p->($c, $user, $pass, $extradata);
+        $promise->then(sub {
+            my ($uid) = @_;
+            return undef if !defined $uid;
             $c->session($session_key => $uid);
             # Clear stash to force reload of any already loaded user object
             delete $c->stash->{$our_stash_key};
-            return 1 if defined $current_user->($c);
-        }
-        return undef;
-    });
+            $current_user_p->($c);
+        })->then(sub {
+            defined $_[0] ? 1 : undef;
+        });
+    };
 }
 
 1;
@@ -169,19 +264,35 @@ Mojolicious::Plugin::Authentication - A plugin to make authentication a bit easi
 
     use Mojolicious::Plugin::Authentication;
 
-    $self->plugin('authentication' => {
+    $self->plugin('Authentication' => {
+        autoload_user   => 1,
+        session_key     => 'wickedapp',
+        load_user_p     => sub { ... },
+        validate_user_p => sub { ... },
+    });
+    # ...
+    $self->authenticate_p(
+        'username', 'password',
+        { optional => 'extra data stuff' },
+    )->then(sub {
+        my ($authenticated) = @_;
+        if ($authenticated) {
+            # ...
+        }
+    });
+
+    # or, synchronous style
+    $self->plugin('Authentication' => {
         autoload_user   => 1,
         session_key     => 'wickedapp',
         load_user       => sub { ... },
         validate_user   => sub { ... },
         current_user_fn => 'user', # compatibility with old code
     });
-
     my $authenticated = $self->authenticate(
         'username', 'password',
         { optional => 'extra data stuff' },
     );
-
     if ($authenticated) {
         ...
     }
@@ -206,9 +317,19 @@ authenticate will not call your C<validate_user> callback; this can be used
 when working with OAuth tokens or other authentication mechanisms that do not
 use a local username and password form.
 
+=head2 authenticate_p($username, $password, $extra_data_hashref)
+
+As above, but instead of returning a value, returns a promise of
+same. Available even if only synchronous callbacks are provided as these
+will be "promisified".
+
 =head2 is_user_authenticated
 
 Returns true if current_user() returns some valid object, false otherwise.
+
+=head2 is_user_authenticated_p
+
+As above, but instead of returning a value, returns a promise of same.
 
 =head2 current_user
 
@@ -220,9 +341,23 @@ bypasses the authentication. This is useful if you have multiple ways to
 authenticate users and want to re-use authorization checks that use
 C<current_user>.
 
+Note that the name of this helper can be changed with
+the C<current_user_fn> field during initialisation (see
+L<below|/CONFIGURATION>).
+
+=head2 current_user_p
+
+As above, but instead of returning a value, returns a promise of
+same.
+
 =head2 reload_user
 
-Flushes the current user object and then returns user().
+Flushes the current user object and then returns current_user().
+
+=head2 reload_user_p
+
+As above, but instead of returning a value, returns a promise of
+same.
 
 =head2 signature_exists
 
@@ -241,7 +376,9 @@ Returns a true value, to allow for chaining.
 
 =head1 CONFIGURATION
 
-The following options can be set for the plugin:
+The following options can be set for the plugin, (but the "REQUIRED"
+ones can be replaced with a promise-returning equivalent with C<_p>
+appended to the key):
 
 =over 4
 
@@ -264,7 +401,8 @@ it be used. May reduce site latency in some cases.
 
 =item current_user_fn (optional)
 
-Set the name for the C<current_user()> helper function
+Set the name for the C<current_user()> helper function. C<_p> will be
+appended for the asynchronous version.
 
 =item fail_render (optional)
 
