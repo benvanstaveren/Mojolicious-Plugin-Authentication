@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use 5.160;
+use 5.016;
 
 use ExtUtils::MakeMaker;
 
@@ -14,7 +14,7 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Mojolicious-Plugin-Authentication",
   "LICENSE" => "perl",
-  "MIN_PERL_VERSION" => "5.160",
+  "MIN_PERL_VERSION" => "5.016",
   "NAME" => "Mojolicious::Plugin::Authentication",
   "PREREQ_PM" => {
     "Exporter" => 0,
