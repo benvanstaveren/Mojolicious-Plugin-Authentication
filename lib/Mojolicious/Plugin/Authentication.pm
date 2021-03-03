@@ -3,6 +3,8 @@ use strict;
 
 package Mojolicious::Plugin::Authentication;
 
+our $VERSION = '1.35';
+
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Promise;
 
@@ -645,7 +647,7 @@ Hernan Lopes (hernan604)
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011-2017 Ben van Staveren.
+Copyright 2011-2021 Ben van Staveren.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
