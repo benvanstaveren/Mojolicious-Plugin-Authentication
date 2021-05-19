@@ -475,10 +475,10 @@ F<t/02-functional_lazy.t> tests, it uses L<Mojolicious::Lite> and this plugin.
 This plugin also exports a routing condition you can use in order to limit
 access to certain documents to only authenticated users.
 
-    $r->route('/foo')->over(authenticated => 1)->to('mycontroller#foo');
+    $r->route('/foo')->requires(authenticated => 1)->to('mycontroller#foo');
 
     my $authenticated_only = $r->route('/members')
-        ->over(authenticated => 1)
+        ->requires(authenticated => 1)
         ->to('members#index');
 
     $authenticated_only->route('online')->to('members#online');
@@ -491,9 +491,11 @@ And another condition for fast and unsecured checking for users, having a
 signature (without validating it). This method just checks client cookies for
 uid data existing.
 
-    $r->route('/foo')->over(signed => 1)->to('mycontroller#foo');
+    $r->route('/foo')->requires(signed => 1)->to('mycontroller#foo');
 
 This behavior is similar to the "authenticated" condition.
+
+Prior to Mojolicious 9, use "over" instead of "requires."
 
 =head1 ROUTING VIA CALLBACK
 
