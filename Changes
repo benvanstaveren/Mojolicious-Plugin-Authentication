@@ -2,6 +2,8 @@ Revision history for Mojolicious-Plugin-Authentication
 
 {{$NEXT}}
 
+1.37      2021-06-10 22:07:08+01:00 Europe/London
+
     * Fixed:
       * Updated documentation to avoid references to 'over', which has
         been deprecated in Mojolicious 9.0. The documentation uses
