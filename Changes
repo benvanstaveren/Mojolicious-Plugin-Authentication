@@ -2,6 +2,10 @@ Revision history for Mojolicious-Plugin-Authentication
 
 {{$NEXT}}
 
+    * Fixed:
+      * Fixed an issue that made the test suite fail with
+        Mojolicious 9.25.
+
 1.37      2021-06-10 22:07:08+01:00 Europe/London
 
     * Fixed:
