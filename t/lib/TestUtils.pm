@@ -1,5 +1,8 @@
+package TestUtils;
+
 use strict;
 use warnings;
+
 use Exporter 'import';
 use Mojo::Promise;
 
