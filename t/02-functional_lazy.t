@@ -7,133 +7,148 @@ BEGIN { $ENV{MOJO_NO_IPV6} = $ENV{MOJO_POLL} = 1 }
 
 use Mojo::File qw(path);
 use lib path(qw(t lib))."";
-use TestUtils qw(load_user_t validate_user_t load_user_t_p validate_user_t_p);
+use TestUtils;
 
 use Test::More;
 
 # testing code starts here
-use Mojolicious::Lite;
-use Test::Mojo;
+package Local::App::Blocking {
+    use Mojolicious::Lite;
+    use Test::Mojo;
 
-plugin 'Authentication', {
-    autoload_user => 0,
-    load_user => \&load_user_t,
-    validate_user => \&validate_user_t,
-};
+    plugin 'Authentication', {
+        autoload_user => 0,
+        load_user     => \&TestUtils::load_user_t,
+        validate_user => \&TestUtils::validate_user_t,
+    };
 
-get '/' => sub {
-    my $self = shift;
-    $self->render( text => 'index page' );
-};
+    get '/' => sub {
+        my $self = shift;
+        $self->render( text => 'index page' );
+    };
 
-post '/login' => sub {
-    my $self = shift;
-    my $u    = $self->req->param('u');
-    my $p    = $self->req->param('p');
+    post '/login' => sub {
+        my $self = shift;
+        my $u    = $self->req->param('u');
+        my $p    = $self->req->param('p');
 
-    $self->render(
-        text => ( $self->authenticate( $u, $p ) ) ? 'ok' : 'failed' );
-};
+        $self->render(
+            text => ( $self->authenticate( $u, $p ) ) ? 'ok' : 'failed' );
+    };
 
-get '/authonly' => sub {
-    my $self = shift;
-    $self->render( text => ( $self->is_user_authenticated )
-        ? 'authenticated'
-        : 'not authenticated' );
-};
+    get '/authonly' => sub {
+        my $self = shift;
+        $self->render( text => ( $self->is_user_authenticated )
+            ? 'authenticated'
+            : 'not authenticated' );
+    };
 
-get '/condition/authonly' => ( authenticated => 1 ) => sub {
-    my $self = shift;
-    $self->render( text => 'authenticated condition' );
-};
+    get '/condition/authonly' => ( authenticated => 1 ) => sub {
+        my $self = shift;
+        $self->render( text => 'authenticated condition' );
+    };
 
-get '/authonly/lazy' => sub {
-    my $self = shift;
-    $self->render( text => ( $self->signature_exists )
-        ? 'sign authenticated'
-        : 'sign not authenticated' );
-};
+    get '/authonly/lazy' => sub {
+        my $self = shift;
+        $self->render( text => ( $self->signature_exists )
+            ? 'sign authenticated'
+            : 'sign not authenticated' );
+    };
 
-get '/condition/authonly/lazy' => ( signed => 1 ) => sub {
-    my $self = shift;
-    $self->render( text => 'signed authenticated condition' );
-};
+    get '/condition/authonly/lazy' => ( signed => 1 ) => sub {
+        my $self = shift;
+        $self->render( text => 'signed authenticated condition' );
+    };
 
-get '/logout' => sub {
-    my $self = shift;
+    get '/logout' => sub {
+        my $self = shift;
 
-    $self->logout();
-    $self->render( text => 'logout' );
-};
+        $self->logout();
+        $self->render( text => 'logout' );
+    };
 
-get '/auto_validate' => sub {
-    my $self = shift;
+    get '/auto_validate' => sub {
+        my $self = shift;
 
-    eval { $self->authenticate( undef, undef, { auto_validate => 'userid' } ) };
-    if ($@) {
-        $self->reply->exception( 'failed' );
-    }
-    else {
-        $self->render( text => 'ok' );
-    }
-};
+        eval { $self->authenticate( undef, undef, { auto_validate => 'userid' } ) };
+        if ($@) {
+            $self->reply->exception( 'failed' );
+        }
+        else {
+            $self->render( text => 'ok' );
+        }
+    };
+}
 
-my $t = Test::Mojo->new;
+{
+    my $t = Test::Mojo->new('Local::App::Blocking');
 
-$t->get_ok('/')->status_is(200)->content_is('index page');
-$t->get_ok('/authonly/lazy')->status_is(200)
-  ->content_is('sign not authenticated');
-$t->get_ok('/condition/authonly/lazy')->status_is(404);
+    $t->get_ok('/')->status_is(200)->content_is('index page');
+    $t->get_ok('/authonly/lazy')->status_is(200)
+      ->content_is('sign not authenticated');
+    $t->get_ok('/condition/authonly/lazy')->status_is(404);
 
-# let's try this
-$t->post_ok( '/login' => form => { u => 'fnark', p => 'fnork' } )->status_is(200)
-  ->content_is('failed');
-$t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
+    # let's try this
+    $t->post_ok( '/login' => form => { u => 'fnark', p => 'fnork' } )->status_is(200)
+      ->content_is('failed');
+    $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
 
-$t->post_ok( '/login' => form => { u => 'foo', p => 'bar' } )->status_is(200)
-  ->content_is('ok');
+    $t->post_ok( '/login' => form => { u => 'foo', p => 'bar' } )->status_is(200)
+      ->content_is('ok');
 
-# try original auth in lazy mode
-$t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
-$t->get_ok('/condition/authonly')->status_is(200)
-  ->content_is('authenticated condition');
+    # try original auth in lazy mode
+    $t->get_ok('/authonly')->status_is(200)->content_is('authenticated');
+    $t->get_ok('/condition/authonly')->status_is(200)
+      ->content_is('authenticated condition');
 
-# try lazy auth - is user just signed
-$t->get_ok('/authonly/lazy')->status_is(200)->content_is('sign authenticated');
-$t->get_ok('/condition/authonly/lazy')->status_is(200)
-  ->content_is('signed authenticated condition');
+    # try lazy auth - is user just signed
+    $t->get_ok('/authonly/lazy')->status_is(200)->content_is('sign authenticated');
+    $t->get_ok('/condition/authonly/lazy')->status_is(200)
+      ->content_is('signed authenticated condition');
 
-$t->get_ok('/logout')->status_is(200)->content_is('logout');
-$t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
-$t->get_ok('/authonly/lazy')->status_is(200)
-  ->content_is('sign not authenticated');
+    $t->get_ok('/logout')->status_is(200)->content_is('logout');
+    $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
+    $t->get_ok('/authonly/lazy')->status_is(200)
+      ->content_is('sign not authenticated');
 
-$t->get_ok('/auto_validate')->status_is(200);
+    $t->get_ok('/auto_validate')->status_is(200);
+}
 
-plugin 'Authentication', {
-    autoload_user => 0,
-    load_user_p => \&load_user_t_p,
-    validate_user_p => \&validate_user_t_p,
-};
-post '/login_p' => sub {
-    my $self = shift;
-    my $u    = $self->req->param('u');
-    my $p    = $self->req->param('p');
-    $self->authenticate_p( $u, $p )->then(sub {
-        $self->render( text => $_[0] ? 'ok' : 'failed' );
-    });
-};
-get '/authonly_p' => sub {
-    my $self = shift;
-    $self->is_user_authenticated_p->then(sub {
-        $self->render( text => $_[0] ? 'authenticated' : 'not authenticated' );
-    });
-};
-$t = Test::Mojo->new;
-$t->post_ok( '/login_p' => form => { u => 'fnark', p => 'fnork' } )->status_is(200)
-  ->content_is('failed');
-$t->get_ok('/authonly_p')->status_is(200)->content_is('not authenticated');
-$t->post_ok( '/login_p' => form => { u => 'foo', p => 'bar' } )->status_is(200)
-  ->content_is('ok');
+# testing code starts here
+package Local::App::Async {
+    use Mojolicious::Lite;
+    use Test::Mojo;
+
+    plugin 'Authentication', {
+        autoload_user => 0,
+        load_user_p => \&TestUtils::load_user_t_p,
+        validate_user_p => \&TestUtils::validate_user_t_p,
+    };
+
+    post '/login' => sub {
+        my $self = shift;
+        my $u    = $self->req->param('u');
+        my $p    = $self->req->param('p');
+        $self->authenticate_p( $u, $p )->then(sub {
+            $self->render( text => $_[0] ? 'ok' : 'failed' );
+        });
+    };
+    get '/authonly' => sub {
+        my $self = shift;
+        $self->is_user_authenticated_p->then(sub {
+            $self->render( text => $_[0] ? 'authenticated' : 'not authenticated' );
+        });
+    };
+}
+
+{
+    my $t = Test::Mojo->new('Local::App::Async');
+
+    $t->post_ok( '/login' => form => { u => 'fnark', p => 'fnork' } )->status_is(200)
+      ->content_is('failed');
+    $t->get_ok('/authonly')->status_is(200)->content_is('not authenticated');
+    $t->post_ok( '/login' => form => { u => 'foo', p => 'bar' } )->status_is(200)
+      ->content_is('ok');
+}
 
 done_testing;
