@@ -14,7 +14,7 @@ use lib path(qw( t lib ))->to_string;
 use TestUtils;
 
 package Local::App::Blocking {
-    use Mojolicious::Lite -signatures;
+    use Mojolicious::Lite;
 
     plugin Authentication => {
         autoload_user => 0,
@@ -22,45 +22,51 @@ package Local::App::Blocking {
         validate_user => \&TestUtils::validate_user_t,
     };
 
-    get '/' => sub ( $self ) {
-        $self->render( text => 'index page' );
+    get '/' => sub {
+        shift->render( text => 'index page' );
     };
 
-    post '/login' => sub ( $self ) {
-        my $u = $self->req->param('u');
-        my $p = $self->req->param('p');
+    post '/login' => sub {
+        my $self = shift;
+        my $u    = $self->req->param('u');
+        my $p    = $self->req->param('p');
 
         $self->render(
             text => ( $self->authenticate( $u, $p ) ) ? 'ok' : 'failed'
         );
     };
 
-    get '/authonly' => sub ( $self ) {
+    get '/authonly' => sub {
+        my $self = shift;
         $self->render( text => ( $self->is_user_authenticated )
             ? 'authenticated'
             : 'not authenticated' );
     };
 
-    get '/condition/authonly' => ( authenticated => 1 ) => sub ( $self ) {
-        $self->render( text => 'authenticated condition' );
+    get '/condition/authonly' => ( authenticated => 1 ) => sub {
+        shift->render( text => 'authenticated condition' );
     };
 
-    get '/authonly/lazy' => sub ( $self ) {
+    get '/authonly/lazy' => sub {
+        my $self = shift;
         $self->render( text => ( $self->signature_exists )
             ? 'sign authenticated'
             : 'sign not authenticated' );
     };
 
-    get '/condition/authonly/lazy' => ( signed => 1 ) => sub ( $self ) {
-        $self->render( text => 'signed authenticated condition' );
+    get '/condition/authonly/lazy' => ( signed => 1 ) => sub {
+        shift->render( text => 'signed authenticated condition' );
     };
 
-    get '/logout' => sub ( $self ) {
+    get '/logout' => sub {
+        my $self = shift;
         $self->logout;
         $self->render( text => 'logout' );
     };
 
-    get '/auto_validate' => sub ( $self ) {
+    get '/auto_validate' => sub {
+        my $self = shift;
+
         eval {
             $self->authenticate( undef, undef, { auto_validate => 'userid' } );
             1;
@@ -140,7 +146,7 @@ subtest 'Blocking  tests' => sub {
 };
 
 package Local::App::Async {
-    use Mojolicious::Lite -signatures;
+    use Mojolicious::Lite;
 
     plugin Authentication => {
         autoload_user => 0,
@@ -148,18 +154,20 @@ package Local::App::Async {
         validate_user_p => \&TestUtils::validate_user_t_p,
     };
 
-    post '/login' => sub ( $self ) {
-        my $u = $self->req->param('u');
-        my $p = $self->req->param('p');
+    post '/login' => sub {
+        my $self = shift;
+        my $u    = $self->req->param('u');
+        my $p    = $self->req->param('p');
 
-        $self->authenticate_p( $u, $p )->then( sub ( $ok ) {
-            $self->render( text => $ok ? 'ok' : 'failed' );
+        $self->authenticate_p( $u, $p )->then( sub {
+            $self->render( text => $_[0] ? 'ok' : 'failed' );
         });
     };
 
-    get '/authonly' => sub ( $self ) {
-        $self->is_user_authenticated_p->then( sub ( $ok ) {
-            $self->render( text => $ok ? 'authenticated' : 'not authenticated' );
+    get '/authonly' => sub {
+        my $self = shift;
+        $self->is_user_authenticated_p->then( sub {
+            $self->render( text => $_[0] ? 'authenticated' : 'not authenticated' );
         });
     };
 }

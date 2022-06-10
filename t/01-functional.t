@@ -14,7 +14,7 @@ use lib path(qw( t lib ))->to_string;
 use TestUtils;
 
 package Local::App::Base {
-    use Mojolicious::Lite -signatures;
+    use Mojolicious::Lite;
 
     plugin Authentication => {
         autoload_user => 1,
@@ -22,28 +22,31 @@ package Local::App::Base {
         validate_user => \&TestUtils::validate_user_t,
     };
 
-    get '/' => sub ( $self ) {
-        $self->render(text => 'index page');
+    get '/' => sub {
+        shift->render(text => 'index page');
     };
 
-    post '/login' => sub ( $self ) {
-        my $u = $self->req->param('u');
-        my $p = $self->req->param('p');
+    post '/login' => sub {
+        my $self = shift;
+        my $u    = $self->req->param('u');
+        my $p    = $self->req->param('p');
 
         $self->render(
             text => $self->authenticate( $u, $p ) ? 'ok' : 'failed'
         );
     };
 
-    post '/login2' => sub ( $self ) {
-        my $u = $self->req->param('u');
-        my $p = $self->req->param('p');
+    post '/login2' => sub {
+        my $self = shift;
+        my $u    = $self->req->param('u');
+        my $p    = $self->req->param('p');
 
         my $ok = $self->authenticate( $u, $p, { 'ohnoes' => 'itsameme' } );
         $self->render( text => $ok ? 'ok' : 'failed');
     };
 
-    get '/authonly' => sub ( $self ) {
+    get '/authonly' => sub {
+        my $self = shift;
         $self->render(
             text => $self->is_user_authenticated
                 ? 'authenticated'
@@ -51,11 +54,12 @@ package Local::App::Base {
         );
     };
 
-    get '/condition/authonly' => ( authenticated => 1 ) => sub ( $self ) {
-        $self->render( text => 'authenticated condition' );
+    get '/condition/authonly' => ( authenticated => 1 ) => sub {
+        shift->render( text => 'authenticated condition' );
     };
 
-    get '/logout' => sub ( $self ) {
+    get '/logout' => sub {
+        my $self = shift;
         $self->logout;
         $self->render( text => 'logout' );
     };
@@ -126,7 +130,7 @@ subtest 'Basic tests' => sub {
 };
 
 package Local::App::Unauthorized {
-    use Mojolicious::Lite -signatures;
+    use Mojolicious::Lite;
 
     plugin Authentication => {
         autoload_user => 1,
@@ -135,8 +139,8 @@ package Local::App::Unauthorized {
         validate_user => \&TestUtils::validate_user_t,
     };
 
-    get '/condition/authonly' => ( authenticated => 1 ) => sub ( $self ) {
-        $self->render( text => 'authenticated condition' );
+    get '/condition/authonly' => ( authenticated => 1 ) => sub {
+        shift->render( text => 'authenticated condition' );
     };
 }
 
@@ -149,7 +153,7 @@ subtest 'Tests with fail_render' => sub {
 };
 
 package Local::App::Promise {
-    use Mojolicious::Lite -signatures;
+    use Mojolicious::Lite;
 
     plugin Authentication => {
         autoload_user   => 1,
@@ -157,8 +161,8 @@ package Local::App::Promise {
         validate_user_p => \&TestUtils::validate_user_t_p,
     };
 
-    get '/condition/authonly' => ( authenticated => 1 ) => sub ( $self ) {
-        $self->render( text => 'authenticated condition' );
+    get '/condition/authonly' => ( authenticated => 1 ) => sub {
+        shift->render( text => 'authenticated condition' );
     };
 }
 

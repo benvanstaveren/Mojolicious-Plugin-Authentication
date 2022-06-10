@@ -2,6 +2,10 @@ Revision history for Mojolicious-Plugin-Authentication
 
 {{$NEXT}}
 
+    * Fixed:
+      * Re-instate support for Perl versions under 5.20, which
+        was accidentally broken in 1.38
+
 1.38      2022-06-09 22:08:48+01:00 Europe/London
 
     * Fixed:
