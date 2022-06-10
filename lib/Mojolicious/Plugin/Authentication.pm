@@ -3,7 +3,7 @@ use strict;
 
 package Mojolicious::Plugin::Authentication;
 
-our $VERSION = '1.39';
+our $VERSION = '1.40';
 
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Promise;
